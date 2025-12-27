@@ -75,7 +75,7 @@ function Test-AdminPrivileges {
     catch { return $false }
 }
 
-function Ensure-Admin {
+function Invoke-AdminCheck {
     param([switch]$Silent)
     
     # Simple check if running as admin
@@ -91,7 +91,7 @@ function Ensure-Admin {
     }
 
     try {
-        $scriptPath = if ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { $PSCommandPath }
+        # Script path logic removed (unused)
         # Relaunch logic is handled by caller usually or simple restart here
         # But usually better to let the script handle the restart arguments (like -SkipRestore)
         # For modules, we just exit if not admin.
@@ -296,7 +296,7 @@ function Get-ActiveNetworkAdapter {
 # SYSTEM SAFETY & RECOVERY
 # ============================================================================
 
-function Create-SystemRestorePoint {
+function New-SystemRestorePoint {
     param([string]$Description = "Neural Optimizer Auto-Restore")
     
     Write-Section "SYSTEM SAFETY CHECK"
@@ -304,7 +304,7 @@ function Create-SystemRestorePoint {
     
     try {
         # Check if System Restore is enabled
-        $rbr = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
+        $null = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         
         # Check privileges again just in case (needs admin)
         if (-not (Test-AdminPrivileges)) {
@@ -329,4 +329,4 @@ function Create-SystemRestorePoint {
     }
 }
 
-Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Ensure-Admin, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, Create-SystemRestorePoint
+Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint

@@ -203,7 +203,7 @@ if (-not (Test-ModulesExist)) {
 
 # Create restore point
 if (-not $SkipRestore) {
-    if (-not (Create-SystemRestorePoint -Description "NeuralOptimize_v$Script:Version")) {
+    if (-not (New-SystemRestorePoint -Description "NeuralOptimize_v$Script:Version")) {
         $choice = Read-Host " >> Continuar SIN punto de restauracion? (SI/NO)"
         if ($choice -ne "SI") { exit }
     }

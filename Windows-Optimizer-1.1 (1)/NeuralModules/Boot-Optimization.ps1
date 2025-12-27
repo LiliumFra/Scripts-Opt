@@ -14,7 +14,7 @@ if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
     if (Test-Path $utilsPath) { Import-Module $utilsPath -Force -DisableNameChecking }
 }
 
-Ensure-Admin -Silent
+Invoke-AdminCheck -Silent
 
 function Optimize-Boot {
     [CmdletBinding()]
