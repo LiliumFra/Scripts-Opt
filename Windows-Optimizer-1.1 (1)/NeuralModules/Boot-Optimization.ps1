@@ -251,6 +251,33 @@ function Optimize-Boot {
     $totalTweaks += 2
     if (Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -Value 1 -Desc "USB Selective Suspend deshabilitado") { $appliedTweaks++ }
     
+    # =========================================================================
+    # 8. SMART SERVICE OPTIMIZATION (SAFE)
+    # =========================================================================
+    
+    Write-Step "[8/8] OPTIMIZACION DE SERVICIOS (SAFE)"
+    
+    $services = @(
+        @{ Name = "DiagTrack"; Desc = "Telemetry (DiagTrack)"; Start = "Disabled" },
+        @{ Name = "dmwappushservice"; Desc = "WAP Push Service (Telemetry)"; Start = "Disabled" },
+        @{ Name = "MapsBroker"; Desc = "Maps Broker (Unused on Desktop)"; Start = "Disabled" },
+        @{ Name = "SysMain"; Desc = "SysMain (Superfetch)"; Start = "Automatic" } # Ensure it's Auto for stability
+    )
+    
+    foreach ($svc in $services) {
+        $totalTweaks++
+        try {
+            if (Get-Service -Name $svc.Name -ErrorAction SilentlyContinue) {
+                Set-Service -Name $svc.Name -StartupType $svc.Start -ErrorAction SilentlyContinue
+                Write-Host "   [OK] Servicio $($svc.Desc): $($svc.Start)" -ForegroundColor Green
+                $appliedTweaks++
+            }
+        }
+        catch {
+            Write-Host "   [--] Servicio $($svc.Name) no encontrado" -ForegroundColor DarkGray
+        }
+    }
+    
     # Resumen
     Write-Host ""
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green

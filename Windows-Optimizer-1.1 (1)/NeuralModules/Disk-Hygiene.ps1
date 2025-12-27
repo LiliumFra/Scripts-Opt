@@ -18,9 +18,31 @@ Ensure-Admin -Silent
 
 function Optimize-Disk {
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$Silent
+    )
     
     Write-Section "DISK, CACHE & NETWORK v3.5"
+    
+    # Check/Create Scheduled Task (Only if not Silent and Admin)
+    if (-not $Silent) {
+        $taskName = "NeuralMaintenance"
+        if (-not (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue)) {
+            Write-Host " [?] Deseas programar Mantenimiento Semanal Automatico? (S/N)" -ForegroundColor Yellow
+            $resp = Read-Host " >"
+            if ($resp -match '^[Ss]') {
+                try {
+                    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`" -Silent"
+                    $trigger = New-ScheduledTaskTrigger -Weekly -Days Sunday -At 12pm
+                    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -RunLevel Highest -User "System" -Force | Out-Null
+                    Write-Host " [OK] Tarea '$taskName' creada (Domingos 12PM)" -ForegroundColor Green
+                }
+                catch {
+                    Write-Host " [X] Error creando tarea: $_" -ForegroundColor Red
+                }
+            }
+        }
+    }
     
     $totalFreed = 0
     $appliedTweaks = 0
@@ -341,7 +363,9 @@ function Optimize-Disk {
     Write-Host " |  Tiempo: $([int]$elapsed.TotalSeconds) segundos                               |" -ForegroundColor Green
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green
     Write-Host ""
-    Write-Host " [!] REINICIAR para aplicar todos los cambios" -ForegroundColor Yellow
+    if (-not $Silent) {
+        Write-Host " [!] REINICIAR para aplicar todos los cambios" -ForegroundColor Yellow
+    }
 }
 
 Optimize-Disk
