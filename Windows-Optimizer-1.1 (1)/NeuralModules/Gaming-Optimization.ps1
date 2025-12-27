@@ -87,7 +87,10 @@ function Optimize-Gaming {
         @{ Path = "HKCU:\Control Panel\Mouse"; Name = "MouseSensitivity"; Value = "10"; Type = "String"; Desc = "Mouse Sensitivity Default" },
         @{ Path = "HKCU:\Control Panel\Accessibility\MouseKeys"; Name = "Flags"; Value = "0"; Type = "String"; Desc = "Mouse Keys OFF" },
         @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Services\mouclass\Parameters"; Name = "MouseDataQueueSize"; Value = 20; Type = "DWord"; Desc = "Mouse Queue optimizada" },
-        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters"; Name = "KeyboardDataQueueSize"; Value = 20; Type = "DWord"; Desc = "Keyboard Queue optimizada" }
+        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Services\mouclass\Parameters"; Name = "MouseDataQueueSize"; Value = 20; Type = "DWord"; Desc = "Mouse Queue optimizada" },
+        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters"; Name = "KeyboardDataQueueSize"; Value = 20; Type = "DWord"; Desc = "Keyboard Queue optimizada" },
+        @{ Path = "HKCU:\Control Panel\Keyboard"; Name = "KeyboardDelay"; Value = "0"; Type = "String"; Desc = "Keyboard Delay 0 (Instant)" },
+        @{ Path = "HKCU:\Control Panel\Keyboard"; Name = "KeyboardSpeed"; Value = "31"; Type = "String"; Desc = "Keyboard Speed 31 (Fastest)" }
     )
     
     foreach ($k in $mouseKeys) {
@@ -299,9 +302,6 @@ function Optimize-Gaming {
     Write-Host ""
     Write-Host " [!] REINICIE SU PC PARA APLICAR CAMBIOS DE GPU/RED" -ForegroundColor Yellow
 
-    Write-Host ""
-    Write-Host " [!] REINICIE SU PC PARA APLICAR CAMBIOS DE GPU/RED" -ForegroundColor Yellow
-
     # =========================================================================
     # 11. ULTIMATE PERFORMANCE (TUNED - ANTI-HEAT)
     # =========================================================================
@@ -367,7 +367,16 @@ function Optimize-Gaming {
             
             # 8. Decrease Time: 500ms -> Mantiene Freq alta medio segundo tras soltar carga (evita micro-lags)
             # GUID: d8ed251d-a688-4662-9550-5d93975002dd
+            # 8. Decrease Time: 500ms -> Mantiene Freq alta medio segundo tras soltar carga (evita micro-lags)
+            # GUID: d8ed251d-a688-4662-9550-5d93975002dd
             powercfg -setacvalueindex scheme_current $subProc d8ed251d-a688-4662-9550-5d93975002dd 500
+            
+            # 9. PCIe Link State Power Management: OFF (0)
+            # GUID: 501a4d13-42af-4429-9fd1-a8218c268e20 (Subgrupo PCI Express) -> ee12f906-d277-404b-b6da-e5fa1a576df5 (Link State)
+            $subPCI = "501a4d13-42af-4429-9fd1-a8218c268e20"
+            $linkState = "ee12f906-d277-404b-b6da-e5fa1a576df5"
+            powercfg -setacvalueindex scheme_current $subPCI $linkState 0
+            powercfg -setdcvalueindex scheme_current $subPCI $linkState 0
             
             powercfg -setactive scheme_current # Apply updates
             
