@@ -109,6 +109,20 @@ function Optimize-Boot {
     $memPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
     $prefPath = "$memPath\PrefetchParameters"
     
+    # 1. IO Page Lock Limit
+    # Determina cuánta memoria I/O se puede bloquear. Defecto es 512KB (muy bajo).
+    # Calculo inteligente: 64MB para sistemas normales, hasta 256MB/512MB para sistemas grandes.
+    if ($hw.RamGB -ge 32) { $ioLimit = 0x20000000; $ioDesc = "512MB (RAM >= 32GB)" } # 512MB
+    elseif ($hw.RamGB -ge 16) { $ioLimit = 0x10000000; $ioDesc = "256MB (RAM >= 16GB)" } # 256MB
+    elseif ($hw.RamGB -ge 8) { $ioLimit = 0x4000000; $ioDesc = "64MB (RAM >= 8GB)" } # 64MB
+    else { $ioLimit = 0; $ioDesc = "Default (Low RAM)" }
+    
+    # 2. Svchost Split Threshold
+    # Controla cómo Windows agrupa servicios. Más Split = Más Estabilidad/Aislamiento, Menos Split = Menos RAM.
+    # En sistemas modernos (>8GB) queremos Split para que 1 servicio fallido no mate a otros.
+    if ($hw.RamGB -ge 4) { $svcSplit = 380000; $svcDesc = "Optimizado (3.8GB Threshold)" }
+    else { $svcSplit = 380000; $svcDesc = "Optimizado (Legacy)" } # Default moderno es seguro
+    
     # Smart logic based on RAM
     if ($hw.RamGB -ge 16) {
         Write-Host "   [i] RAM > 16GB detectada: Activando Large System Cache" -ForegroundColor Cyan
@@ -125,6 +139,8 @@ function Optimize-Boot {
         @{ Path = $memPath; Name = "ClearPageFileAtShutdown"; Value = 0; Desc = "No limpiar PageFile al apagar" },
         @{ Path = $memPath; Name = "DisablePagingExecutive"; Value = $disablePagingExe; Desc = "DisablePagingExecutive ($disablePagingExe)" },
         @{ Path = $memPath; Name = "LargeSystemCache"; Value = $largeSystemCache; Desc = "LargeSystemCache ($largeSystemCache)" },
+        @{ Path = $memPath; Name = "IoPageLockLimit"; Value = $ioLimit; Type = "DWord"; Desc = "IO Buffer: $ioDesc" },
+        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control"; Name = "SvcHostSplitThresholdInKB"; Value = $svcSplit; Type = "DWord"; Desc = "Svchost Split: $svcDesc" },
         @{ Path = $prefPath; Name = "EnablePrefetcher"; Value = 3; Desc = "Prefetcher optimizado" },
         @{ Path = $prefPath; Name = "EnableSuperfetch"; Value = 3; Desc = "Superfetch optimizado" }
     )

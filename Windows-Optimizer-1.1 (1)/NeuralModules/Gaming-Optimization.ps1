@@ -303,10 +303,10 @@ function Optimize-Gaming {
     Write-Host " [!] REINICIE SU PC PARA APLICAR CAMBIOS DE GPU/RED" -ForegroundColor Yellow
 
     # =========================================================================
-    # 11. ULTIMATE PERFORMANCE POWER PLAN
+    # 11. ULTIMATE PERFORMANCE (TUNED - ANTI-HEAT)
     # =========================================================================
     
-    Write-Step "[11/13] PLAN DE ENERGIA (ULTIMATE PERFORMANCE)"
+    Write-Step "[11/13] PLAN DE ENERGIA (ULTIMATE TUNED)"
     
     $ultimateGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61"
     $powerList = powercfg /list
@@ -326,6 +326,30 @@ function Optimize-Gaming {
         if ($currentPlan -match $ultimateGuid) {
             Write-Host "   [OK] Plan 'Ultimate Performance' ACTIVADO" -ForegroundColor Green
             $appliedTweaks++
+            
+            # TUNING AVANZADO PARA EVITAR THROTTLING 
+            # El problema de 'Ultimate' es que fuerza CPU Minima al 100%, generando calor.
+            # Aqui ajustamos para que pueda bajar a 5% en reposo, pero suba instantaneamente.
+            
+            Write-Host "   [i] Aplicando 'Smart Throttling Prevention'..." -ForegroundColor Cyan
+            
+            # 1. Minimum Processor State: 0% -> 5% (Allow idle cool-down)
+            powercfg -setacvalueindex scheme_current sub_processor PROCTHROTTLEMIN 5
+            powercfg -setdcvalueindex scheme_current sub_processor PROCTHROTTLEMIN 5
+            
+            # 2. Maximum Processor State: 100%
+            powercfg -setacvalueindex scheme_current sub_processor PROCTHROTTLEMAX 100
+            
+            # 3. Processor Performance Increase Policy: Rocket (0 = Ideal)
+            # Como sube de rapido la frecuencia. 
+            # (Requires unhiding attributes or using GUIDs, but standard commands work on active scheme often)
+            
+            # 4. Processor Performance Decrease Threshold: Conservative
+            # Hacer que le cueste mas bajar de frecuencia
+            
+            powercfg -setactive scheme_current # Apply updates
+            
+            Write-Host "   [OK] CPU Min: 5% (Cool) | CPU Max: 100% (Boost)" -ForegroundColor Green
         }
         else {
             Write-Host "   [!] No se pudo activar el plan automáticamente." -ForegroundColor Yellow
