@@ -252,10 +252,24 @@ function Get-HardwareProfile {
     }
     catch {}
     
-    # SSD
+    # SSD (Smart System Drive Detection)
     try {
-        $disk = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq 0 } | Select-Object -First 1 -ErrorAction SilentlyContinue
-        if ($disk -and ($disk.MediaType -match "SSD|Unspecified")) {
+        # Try to find the physical disk hosting the OS (C:)
+        $driveLetter = ($env:SystemDrive -replace ':', '')
+        $partition = Get-Partition -DriveLetter $driveLetter -ErrorAction SilentlyContinue
+        
+        $targetDisk = $null
+        
+        if ($partition) {
+            $targetDisk = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq $partition.DiskNumber } | Select-Object -First 1
+        }
+        
+        # Fallback to Disk 0 if logic fails
+        if (-not $targetDisk) {
+            $targetDisk = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq 0 } | Select-Object -First 1
+        }
+
+        if ($targetDisk -and ($targetDisk.MediaType -match "SSD|Unspecified")) {
             $hw.IsSSD = $true
         }
     }
