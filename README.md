@@ -48,11 +48,16 @@
 ## 🚀 How to Use
 
 1. **Download** the repository.
-2. Right-click `Optimize-Windows.ps1` and select **Run with PowerShell**.
-   - *Note: You must run as Administrator.*
+2. Double-click **`Run-Optimizer.bat`**.
+   - *This will automatically ask for Admin permissions and launch the menu.*
 3. Select an option from the menu:
    - `[1-4]`: Run individual modules.
    - `[5]`: **Run ALL (Reccomended)**.
+
+### For NeuralCache
+
+- Double-click **`Run-NeuralCache.bat`**.
+- It will automatically detecting your Steam library or ask you to drag a folder.
 
 ## ⚠️ Disclaimer
 

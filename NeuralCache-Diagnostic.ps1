@@ -214,6 +214,7 @@ function Get-OptimizedFileList {
     
     $optimizedList = @()
     $skippedCount = 0
+    $priorityCount = 0
     
     foreach ($file in $Files) {
         $ext = [System.IO.Path]::GetExtension($file).ToLower()
@@ -224,15 +225,20 @@ function Get-OptimizedFileList {
             continue 
         }
         
-        # 2. Ignorar archivos masivos de video que no sean assets (ej. > 500MB mp4 que escaparon filtro)
-        # Nota: Mejor confiar en extensiones por velocidad.
+        # 2. Contar Prioridad (Binarios/Assets)
+        if ($HighPriorityExt -contains $ext) {
+            $priorityCount++
+        }
         
-        # 3. Todo lo demas entra (incluyendo HighPriority)
+        # 3. Todo lo demas entra
         $optimizedList += $file
     }
     
     if ($skippedCount -gt 0) {
         Write-Host " [SMART] Se ignoraron $skippedCount archivos innecesarios (videos, logs, etc)." -ForegroundColor Green
+    }
+    if ($priorityCount -gt 0) {
+        Write-Host " [SMART] Identificados $priorityCount archivos criticos (Binarios/Assets)." -ForegroundColor Cyan
     }
     
     return , $optimizedList
