@@ -327,29 +327,51 @@ function Optimize-Gaming {
             Write-Host "   [OK] Plan 'Ultimate Performance' ACTIVADO" -ForegroundColor Green
             $appliedTweaks++
             
-            # TUNING AVANZADO PARA EVITAR THROTTLING 
-            # El problema de 'Ultimate' es que fuerza CPU Minima al 100%, generando calor.
-            # Aqui ajustamos para que pueda bajar a 5% en reposo, pero suba instantaneamente.
+            # TUNING AVANZADO DE ESCALADO DINAMICO (ROCKET UP, PARACHUTE DOWN)
+            # Objetivo: CPU debe saltar a Max Freq INSTANTANEAMENTE al mover el mouse/jugar
+            # pero bajar suavemente para enfriarse cuando no se hace nada.
             
-            Write-Host "   [i] Aplicando 'Smart Throttling Prevention'..." -ForegroundColor Cyan
+            Write-Host "   [i] Aplicando 'Dynamic Quantum Boost'..." -ForegroundColor Cyan
             
-            # 1. Minimum Processor State: 0% -> 5% (Allow idle cool-down)
-            powercfg -setacvalueindex scheme_current sub_processor PROCTHROTTLEMIN 5
-            powercfg -setdcvalueindex scheme_current sub_processor PROCTHROTTLEMIN 5
+            # GUIDs de Subgrupo Processor Settings
+            $subProc = "54533251-82be-4824-96c1-47b60b740d00"
+            
+            # 1. Minimum Processor State: 0% -> 5% (Permite enfriamiento)
+            powercfg -setacvalueindex scheme_current $subProc PROCTHROTTLEMIN 5
+            powercfg -setdcvalueindex scheme_current $subProc PROCTHROTTLEMIN 5
             
             # 2. Maximum Processor State: 100%
-            powercfg -setacvalueindex scheme_current sub_processor PROCTHROTTLEMAX 100
+            powercfg -setacvalueindex scheme_current $subProc PROCTHROTTLEMAX 100
             
-            # 3. Processor Performance Increase Policy: Rocket (0 = Ideal)
-            # Como sube de rapido la frecuencia. 
-            # (Requires unhiding attributes or using GUIDs, but standard commands work on active scheme often)
+            # --- SUPER TUNING DE RESPUESTA ---
             
-            # 4. Processor Performance Decrease Threshold: Conservative
-            # Hacer que le cueste mas bajar de frecuencia
+            # 3. Increase Policy: ROCKET (2) -> Salta a Max Freq INMEDIATAMENTE
+            # GUID: 465e1f50-b610-4a66-a5f6-30e92623b054
+            powercfg -setacvalueindex scheme_current $subProc 465e1f50-b610-4a66-a5f6-30e92623b054 2
+            
+            # 4. Decrease Policy: SINGLE (1) -> Baja gradualmente (Suave)
+            # GUID: 40fbefc7-2e9d-4d25-a185-0cfd8574bac6
+            powercfg -setacvalueindex scheme_current $subProc 40fbefc7-2e9d-4d25-a185-0cfd8574bac6 1
+            
+            # 5. Increase Threshold: 10% -> Detecta carga minima y acelera
+            # GUID: 06cadf0e-64ed-448a-8927-ce7bf90eb35d
+            powercfg -setacvalueindex scheme_current $subProc 06cadf0e-64ed-448a-8927-ce7bf90eb35d 10
+            
+            # 6. Decrease Threshold: 8% -> Mantiene velocidad alta hasta ser casi idle
+            # GUID: 12a0650c-292b-4ef1-87c3-15d71b563531
+            powercfg -setacvalueindex scheme_current $subProc 12a0650c-292b-4ef1-87c3-15d71b563531 8
+            
+            # 7. Increase Time: 0 o 1ms -> Reacción Instantánea
+            # GUID: 984cf492-3bed-4488-a8f9-4286c97bf5aa
+            powercfg -setacvalueindex scheme_current $subProc 984cf492-3bed-4488-a8f9-4286c97bf5aa 1
+            
+            # 8. Decrease Time: 500ms -> Mantiene Freq alta medio segundo tras soltar carga (evita micro-lags)
+            # GUID: d8ed251d-a688-4662-9550-5d93975002dd
+            powercfg -setacvalueindex scheme_current $subProc d8ed251d-a688-4662-9550-5d93975002dd 500
             
             powercfg -setactive scheme_current # Apply updates
             
-            Write-Host "   [OK] CPU Min: 5% (Cool) | CPU Max: 100% (Boost)" -ForegroundColor Green
+            Write-Host "   [OK] CPU Logic: Rocket UP (Instant) | Parachute DOWN (Smooth)" -ForegroundColor Green
         }
         else {
             Write-Host "   [!] No se pudo activar el plan automáticamente." -ForegroundColor Yellow
