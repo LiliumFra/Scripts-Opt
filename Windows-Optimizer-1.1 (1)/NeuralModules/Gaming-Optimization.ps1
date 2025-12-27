@@ -354,10 +354,71 @@ function Optimize-Gaming {
     }
     
     # =========================================================================
-    # 13. SMART DNS BENCHMARK
+    # 13. KERNEL & MODERN ALGORITHMS (SPEED TWEAKS)
     # =========================================================================
     
-    Write-Step "[13/13] SMART DNS BENCHMARK (Experimental)"
+    Write-Step "[13/15] OPTIMIZACIONES DE KERNEL Y ALGORITMOS"
+    
+    # 13.1 System Responsiveness (Multimedia Scheduler)
+    # Reserva 0% de CPU para tareas de baja prioridad (Juegos obtienen 100%)
+    $systemProfile = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+    if (Set-RegistryKey -Path $systemProfile -Name "SystemResponsiveness" -Value 0 -Desc "Kernel: System Responsiveness = 0") { 
+        $appliedTweaks++
+    }
+    
+    # 13.2 Memory Compression (Solo si RAM > 16GB)
+    # Deshabilitar compresión libera ciclos de CPU (Kernel) pero usa más RAM.
+    if ($hw.RamGB -ge 16) {
+        Write-Host "   [i] Memoria Inteligente (>16GB Detectado)" -ForegroundColor Cyan
+        try {
+            # Check current status
+            $mmStatus = Get-MMAgent -ErrorAction SilentlyContinue
+            if ($mmStatus.MemoryCompression) {
+                Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "   [OK] Algoritmo: Memory Compression DESHABILITADO (CPU Boost)" -ForegroundColor Green
+                $appliedTweaks++
+            }
+        }
+        catch {}
+    }
+    
+    # 13.3 Advanced Network Algorithms (RSC / ECN)
+    if ($activeNic) {
+        Write-Host "   [i] Algoritmos de Red Modernos..." -ForegroundColor Cyan
+        
+        # RSC (Receive Segment Coalescing) - BAD for Latency, GOOD for Throughput
+        # Deshabilitar RSC reduce latencia en juegos online
+        try {
+            if (Get-Command "Disable-NetAdapterRsc" -ErrorAction SilentlyContinue) {
+                Disable-NetAdapterRsc -Name $activeNic.Name -ErrorAction SilentlyContinue
+                Write-Host "   [OK] Algoritmo: RSC Deshabilitado (Menor Latencia)" -ForegroundColor Green
+                $appliedTweaks++
+            }
+        }
+        catch {}
+        
+        # ECN (Explicit Congestion Notification) - Modern Router Efficiency
+        try {
+            Set-NetTCPSetting -SettingName InternetCustom -EcnCapability Enabled -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Algoritmo: ECN Habilitado (Modern Routing)" -ForegroundColor Green
+            $appliedTweaks++
+        }
+        catch {}
+        
+        # Disable Timestamps (Overhead reduction)
+        try {
+            Set-NetTCPSetting -SettingName InternetCustom -Timestamps Disabled -ErrorAction SilentlyContinue
+            Write-Host "   [OK] TCP Timestamps: Deshabilitado (Overhead Off)" -ForegroundColor Green
+            $appliedTweaks++
+        }
+        catch {}
+    }
+
+    # =========================================================================
+    # 14. SMART DNS BENCHMARK
+    # =========================================================================
+    
+    Write-Step "[14/14] SMART DNS BENCHMARK (Experimental)"
     
     function Test-DnsLatency {
         param($IP)
