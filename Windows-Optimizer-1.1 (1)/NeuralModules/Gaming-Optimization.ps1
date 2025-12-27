@@ -267,6 +267,16 @@ function Optimize-Gaming {
                 Write-Host "   [OK] Flow Control deshabilitado" -ForegroundColor Green
                 $appliedTweaks++
             }
+            
+            # Disable Energy Efficient Ethernet (Green Ethernet) - KILLER for Latency
+            # We try to disable common EEE properties via Set-NetAdapterAdvancedProperty
+            $eeeProps = @("*EEE", "*GreenEthernet", "Energy Efficient Ethernet", "Green Ethernet", "*PowerSaving", "*FlowControl")
+            foreach ($prop in $eeeProps) {
+                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName $prop -DisplayValue "Disabled" -ErrorAction SilentlyContinue
+                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName $prop -DisplayValue "Off" -ErrorAction SilentlyContinue
+            }
+            Write-Host "   [OK] Green Ethernet / EEE Deshabilitado (Deep Tweak)" -ForegroundColor Green
+            $appliedTweaks++
         }
         catch {}
     }
