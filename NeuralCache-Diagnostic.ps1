@@ -514,31 +514,50 @@ try {
     Write-Host "   - Cache valido por 15 dias" -ForegroundColor Gray
     Write-Host ""
     
-    # Ofrecer inicio automatico
+    # Ofrecer o Actualizar inicio automatico
     $startupPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
     $startupName = "NeuralCache"
     $currentStartup = Get-ItemProperty -Path $startupPath -Name $startupName -EA SilentlyContinue
     
-    if (-not $currentStartup) {
-        Write-Host " [?] Deseas activar inicio automatico con Windows? (S/N)" -ForegroundColor Yellow
-        $response = Read-Host " >"
-        
-        if ($response -match '^[Ss]') {
+    # Construir comando ideal
+    $scriptFullPath = $MyInvocation.MyCommand.Path
+    if (-not $scriptFullPath) { $scriptFullPath = $PSCommandPath }
+    $startupCmd = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptFullPath`" -TargetDir `"$TargetDir`" -Silent -AutoAccept"
+    
+    if ($currentStartup) {
+        # Ya existe, verificar si esta actualizado
+        $currentVal = $currentStartup.$startupName
+        if ($currentVal -ne $startupCmd) {
+            # Actualizar silenciosamente para asegurar que tenga -Silent y la ruta correcta
             try {
-                $scriptFullPath = $MyInvocation.MyCommand.Path
-                if (-not $scriptFullPath) { $scriptFullPath = $PSCommandPath }
-                $startupCmd = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptFullPath`" -TargetDir `"$TargetDir`" -Silent -AutoAccept"
                 Set-ItemProperty -Path $startupPath -Name $startupName -Value $startupCmd -Type String -Force
-                Write-Host " [OK] Inicio automatico activado!" -ForegroundColor Green
-                Write-Host "      Se ejecutara silenciosamente al iniciar Windows." -ForegroundColor DarkCyan
+                if (-not $Silent) { 
+                    Write-Host " [UPDATE] Configuracion de inicio actualizada a la version v3.5." -ForegroundColor Green
+                }
             }
-            catch {
-                Write-Host " [!!] Error al configurar inicio automatico: $_" -ForegroundColor Yellow
-            }
+            catch {}
+        }
+        else {
+            if (-not $Silent) { Write-Host " [i] Inicio automatico activo y configurado correctamente." -ForegroundColor DarkCyan }
         }
     }
     else {
-        Write-Host " [i] Inicio automatico ya esta configurado." -ForegroundColor DarkCyan
+        # No existe, ofrecer activar
+        if (-not $Silent) {
+            Write-Host " [?] Deseas activar inicio automatico con Windows? (S/N)" -ForegroundColor Yellow
+            $response = Read-Host " >"
+            
+            if ($response -match '^[Ss]') {
+                try {
+                    Set-ItemProperty -Path $startupPath -Name $startupName -Value $startupCmd -Type String -Force
+                    Write-Host " [OK] Inicio automatico activado!" -ForegroundColor Green
+                    Write-Host "      Se ejecutara silenciosamente al iniciar Windows." -ForegroundColor DarkCyan
+                }
+                catch {
+                    Write-Host " [!!] Error al configurar inicio automatico: $_" -ForegroundColor Yellow
+                }
+            }
+        }
     }
     
     if (-not $Silent) {

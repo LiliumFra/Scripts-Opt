@@ -299,11 +299,65 @@ function Optimize-Gaming {
     Write-Host ""
     Write-Host " [!] REINICIE SU PC PARA APLICAR CAMBIOS DE GPU/RED" -ForegroundColor Yellow
 
+    Write-Host ""
+    Write-Host " [!] REINICIE SU PC PARA APLICAR CAMBIOS DE GPU/RED" -ForegroundColor Yellow
+
     # =========================================================================
-    # 11. SMART DNS BENCHMARK
+    # 11. ULTIMATE PERFORMANCE POWER PLAN
     # =========================================================================
     
-    Write-Step "[11/11] SMART DNS BENCHMARK (Experimental)"
+    Write-Step "[11/13] PLAN DE ENERGIA (ULTIMATE PERFORMANCE)"
+    
+    $ultimateGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61"
+    $powerList = powercfg /list
+    
+    if ($powerList -match $ultimateGuid) {
+        Write-Host "   [i] Plan Ultimate Performance ya existe." -ForegroundColor DarkGray
+    }
+    else {
+        Write-Host "   [+] Creando Plan Ultimate Performance..." -ForegroundColor Cyan
+        powercfg -duplicatescheme $ultimateGuid 2>$null | Out-Null
+    }
+    
+    # Activar
+    try {
+        powercfg -setactive $ultimateGuid
+        $currentPlan = powercfg /getactivescheme
+        if ($currentPlan -match $ultimateGuid) {
+            Write-Host "   [OK] Plan 'Ultimate Performance' ACTIVADO" -ForegroundColor Green
+            $appliedTweaks++
+        }
+        else {
+            Write-Host "   [!] No se pudo activar el plan automáticamente." -ForegroundColor Yellow
+        }
+    }
+    catch {
+        Write-Host "   [X] Error gestionando plan de energía." -ForegroundColor Red
+    }
+    
+    # =========================================================================
+    # 12. VISUAL EFFECTS (PERFORMANCE)
+    # =========================================================================
+    
+    Write-Step "[12/13] EFECTOS VISUALES (RENDIMIENTO)"
+    
+    # Adjust for Best Performance (VisualFXSetting = 2)
+    $visKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"
+    if (Set-RegistryKey -Path $visKey -Name "VisualFXSetting" -Value 2 -Desc "Ajustar para mejor rendimiento") { 
+        $appliedTweaks++ 
+    }
+    
+    # Disable Transparency
+    $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+    if (Set-RegistryKey -Path $personalizeKey -Name "EnableTransparency" -Value 0 -Desc "Transparencia Deshabilitada") { 
+        $appliedTweaks++ 
+    }
+    
+    # =========================================================================
+    # 13. SMART DNS BENCHMARK
+    # =========================================================================
+    
+    Write-Step "[13/13] SMART DNS BENCHMARK (Experimental)"
     
     function Test-DnsLatency {
         param($IP)
