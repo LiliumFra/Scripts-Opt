@@ -141,8 +141,8 @@ function Optimize-Boot {
         @{ Path = $memPath; Name = "LargeSystemCache"; Value = $largeSystemCache; Desc = "LargeSystemCache ($largeSystemCache)" },
         @{ Path = $memPath; Name = "IoPageLockLimit"; Value = $ioLimit; Type = "DWord"; Desc = "IO Buffer: $ioDesc" },
         @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control"; Name = "SvcHostSplitThresholdInKB"; Value = $svcSplit; Type = "DWord"; Desc = "Svchost Split: $svcDesc" },
-        @{ Path = $prefPath; Name = "EnablePrefetcher"; Value = 3; Desc = "Prefetcher optimizado" },
-        @{ Path = $prefPath; Name = "EnableSuperfetch"; Value = 3; Desc = "Superfetch optimizado" }
+        @{ Path = $prefPath; Name = "EnablePrefetcher"; Value = $(if ($hw.IsSSD) { 0 } else { 3 }); Desc = "Prefetcher $(if ($hw.IsSSD) { 'OFF (SSD)' } else { 'ON (HDD)' })" },
+        @{ Path = $prefPath; Name = "EnableSuperfetch"; Value = $(if ($hw.IsSSD) { 0 } else { 3 }); Desc = "Superfetch $(if ($hw.IsSSD) { 'OFF (SSD)' } else { 'ON (HDD)' })" }
     )
     
     foreach ($k in $memoryKeys) {
@@ -261,7 +261,8 @@ function Optimize-Boot {
         @{ Name = "DiagTrack"; Desc = "Telemetry (DiagTrack)"; Start = "Disabled" },
         @{ Name = "dmwappushservice"; Desc = "WAP Push Service (Telemetry)"; Start = "Disabled" },
         @{ Name = "MapsBroker"; Desc = "Maps Broker (Unused on Desktop)"; Start = "Disabled" },
-        @{ Name = "SysMain"; Desc = "SysMain (Superfetch)"; Start = "Automatic" } # Ensure it's Auto for stability
+        @{ Name = "SysMain"; Desc = "SysMain (Superfetch)"; Start = "Automatic" }, # Ensure it's Auto for stability
+        @{ Name = "defragsvc"; Desc = "Optimize Drives (Trim/Defrag)"; Start = "Automatic" } # Vital for SSD Trim & HDD Defrag
     )
     
     foreach ($svc in $services) {
