@@ -171,8 +171,10 @@ function Show-Menu {
     Write-Host ' | 2. [DEBLOAT] Eliminar Apps + Privacidad         |' -ForegroundColor White
     Write-Host ' | 3. [DISK]    Limpieza + Red                     |' -ForegroundColor White
     Write-Host ' | 4. [GAMING]  Optimizar para Juegos              |' -ForegroundColor White
-    Write-Host ' | 5. [ALL]     EJECUTAR TODO (Recomendado)        |' -ForegroundColor Cyan
-    Write-Host ' | 6. Salir                                        |' -ForegroundColor DarkGray
+    Write-Host ' | 5. [CACHE]   Neural Cache Diagnostic            |' -ForegroundColor White
+    Write-Host ' | 6. [ALL]     EJECUTAR TODO (Recomendado)        |' -ForegroundColor Cyan
+    Write-Host ' | 8. [THERMAL] Optimizar Ventiladores (Thermal)  |' -ForegroundColor White
+    Write-Host ' | 7. Salir                                        |' -ForegroundColor DarkGray
     Write-Host ' +-------------------------------------------------+' -ForegroundColor Gray
     Write-Host ''
 }
@@ -185,6 +187,7 @@ trap {
     Write-Log "ERROR FATAL: $($_.Exception.Message)" -Level Error -LogPath $Script:LogFile
     Write-Log "Ubicacion: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -Level Error -LogPath $Script:LogFile
     Wait-ForKeyPress -Message "Presione cualquier tecla para salir..."
+    Stop-Transcript -ErrorAction SilentlyContinue
     exit 1
 }
 
@@ -193,11 +196,19 @@ Write-Log "=== INICIANDO NEURAL OPTIMIZER v$Script:Version ===" -Level Info -Log
 Write-Log "Usuario: $env:USERNAME | Computadora: $env:COMPUTERNAME" -Level Info -LogPath $Script:LogFile
 Write-Log "PowerShell: $($PSVersionTable.PSVersion) | OS: $([Environment]::OSVersion.VersionString)" -Level Info -LogPath $Script:LogFile
 
+# Start detailed transcript
+try { 
+    $TranscriptFile = Join-Path -Path $Script:ScriptDir -ChildPath "Neural_Detailed.log"
+    Start-Transcript -Path $TranscriptFile -Append -IncludeInvocationHeader -Force -ErrorAction SilentlyContinue | Out-Null
+}
+catch {}
+
 # Validate modules exist
 if (-not (Test-ModulesExist)) {
     Write-Host ""
     Write-Host " [X] ERROR: Faltan modulos requeridos en $Script:ModuleDir" -ForegroundColor Red
     Wait-ForKeyPress
+    Stop-Transcript -ErrorAction SilentlyContinue
     exit 1
 }
 
@@ -205,7 +216,7 @@ if (-not (Test-ModulesExist)) {
 if (-not $SkipRestore) {
     if (-not (New-SystemRestorePoint -Description "NeuralOptimize_v$Script:Version")) {
         $choice = Read-Host " >> Continuar SIN punto de restauracion? (SI/NO)"
-        if ($choice -ne "SI") { exit }
+        if ($choice -ne "SI") { Stop-Transcript -ErrorAction SilentlyContinue; exit }
     }
 }
 
@@ -234,6 +245,16 @@ while ($true) {
             Wait-ForKeyPress
         }
         '5' {
+            $ncPath = Join-Path (Split-Path $Script:ScriptDir -Parent) "NeuralCache-Diagnostic.ps1"
+            if (Test-Path $ncPath) {
+                Invoke-OptimizationModule -Name "NEURAL CACHE" -ScriptPath $ncPath
+            }
+            else {
+                Write-Host " [!] NeuralCache-Diagnostic.ps1 no encontrado en $ncPath" -ForegroundColor Red
+            }
+            Wait-ForKeyPress
+        }
+        '6' {
             $startAll = Get-Date
             Write-Log "=== OPTIMIZACION COMPLETA INICIADA ===" -Level Info -LogPath $Script:LogFile
             
@@ -256,8 +277,13 @@ while ($true) {
             Write-Log "=== OPTIMIZACION COMPLETA: $successCount/4 modulos en $([int]$totalTime.TotalSeconds)s ===" -Level Success -LogPath $Script:LogFile
             Wait-ForKeyPress
         }
-        '6' {
+        '8' {
+            Invoke-OptimizationModule -Name "THERMAL OPTIMIZATION" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1")
+            Wait-ForKeyPress
+        }
+        '7' {
             Write-Log "Usuario salio del programa." -Level Info -LogPath $Script:LogFile
+            Stop-Transcript -ErrorAction SilentlyContinue
             exit 0
         }
         default {

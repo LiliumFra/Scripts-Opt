@@ -368,4 +368,4 @@ function Optimize-Disk {
     }
 }
 
-Optimize-Disk
+if ($Silent) { Optimize-Disk -Silent } else { Optimize-Disk }

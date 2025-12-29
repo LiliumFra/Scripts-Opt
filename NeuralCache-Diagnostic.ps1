@@ -110,6 +110,21 @@ function Find-SteamDirectory {
     return $null
 }
 
+function Clear-OldCaches {
+    $cacheRootDir = Join-Path -Path $env:LOCALAPPDATA -ChildPath "NeuralCache"
+    if (Test-Path $cacheRootDir) {
+        try {
+            # Remove files older than 15 days
+            $oldFiles = Get-ChildItem -Path $cacheRootDir -Filter "cache_*.json" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-15) }
+            foreach ($file in $oldFiles) {
+                Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
+                Write-Log "Cache expirado eliminado: $($file.Name)" -Level Info
+            }
+        }
+        catch {}
+    }
+}
+
 # ============================================================================
 # SISTEMA DE CACHE / MEMORIA
 # ============================================================================
