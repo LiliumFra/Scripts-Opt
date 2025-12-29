@@ -174,8 +174,8 @@ function Show-Menu {
     Write-Host ' | 4. [GAMING]  Optimizar para Juegos              |' -ForegroundColor White
     Write-Host ' | 5. [CACHE]   Neural Cache Diagnostic            |' -ForegroundColor White
     Write-Host ' | 6. [ALL]     EJECUTAR TODO (Recomendado)        |' -ForegroundColor Cyan
-    Write-Host ' | 8. [THERMAL] Optimizar Ventiladores (Thermal)  |' -ForegroundColor White
-    Write-Host ' | 7. Salir                                        |' -ForegroundColor DarkGray
+    Write-Host ' | 7. [THERMAL] Optimizar Ventiladores (Thermal)  |' -ForegroundColor White
+    Write-Host ' | 8. Salir                                        |' -ForegroundColor DarkGray
     Write-Host ' +-------------------------------------------------+' -ForegroundColor Gray
     Write-Host ''
 }
@@ -279,13 +279,13 @@ while ($true) {
             Wait-ForKeyPress
         }
         '8' {
-            Invoke-OptimizationModule -Name "THERMAL OPTIMIZATION" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1")
-            Wait-ForKeyPress
-        }
-        '7' {
             Write-Log "Usuario salio del programa." -Level Info -LogPath $Script:LogFile
             Stop-Transcript -ErrorAction SilentlyContinue
             exit 0
+        }
+        '7' {
+            Invoke-OptimizationModule -Name "THERMAL OPTIMIZATION" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1")
+            Wait-ForKeyPress
         }
         default {
             Write-Host " [!] Opcion no valida. Intente de nuevo." -ForegroundColor Yellow
