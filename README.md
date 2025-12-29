@@ -69,3 +69,4 @@ This software makes changes to the Windows Registry and System Services.
 
 - **Concept & Architecture**: Josef
 - **Core Optimization Logic**: Josef
+- **Additional Credits**: Jose Bustamante
