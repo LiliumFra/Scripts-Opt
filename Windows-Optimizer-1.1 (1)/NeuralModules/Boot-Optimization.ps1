@@ -5,6 +5,7 @@
 
 .NOTES
     Parte de Windows Neural Optimizer v3.5
+    Creditos: Jose Bustamante
 #>
 
 # Ensure Utils are loaded

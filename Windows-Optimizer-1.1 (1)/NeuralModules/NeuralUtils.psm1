@@ -13,6 +13,7 @@
 
 .NOTES
     Part of Windows Neural Optimizer v3.5
+    Creditos: Jose Bustamante
 #>
 
 # ============================================================================

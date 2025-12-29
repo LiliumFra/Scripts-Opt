@@ -6,6 +6,7 @@
 .DESCRIPTION
     Sistema de cache que guarda los archivos escaneados para no tener que
     escanear de nuevo cada vez. Cache de 15 dias. Incluye inicio automatico.
+    Creditos: Jose Bustamante
     
 .PARAMETER TargetDir
     Directorio a escanear (auto-detecta D:\Steam si no se especifica)

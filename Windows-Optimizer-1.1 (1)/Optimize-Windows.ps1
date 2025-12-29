@@ -13,6 +13,7 @@
 
 .NOTES
     Versión: 3.5 NEURAL
+    Creditos: Jose Bustamante
     Requiere: PowerShell 5.1+, Permisos de Administrador
 #>
 
