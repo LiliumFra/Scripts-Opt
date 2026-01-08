@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    NeuralUtils Module v5.0 ULTRA
+    NeuralUtils Module v5.1 GLOBAL
     Core shared functions for Windows Neural Optimizer.
 
 .DESCRIPTION
     Centralizes common logic:
+    - Localization (NeuralLocalization)
     - Logging (Write-Log)
     - Admin Checks (Test-AdminPrivileges)
     - UI Helpers (Wait-ForKeyPress, Write-Section)
@@ -19,6 +20,11 @@
     Part of Windows Neural Optimizer v5.0 ULTRA
     Creditos: Jose Bustamante
 #>
+# ============================================================================
+# IMPORTS
+# ============================================================================
+$Script:ModulePath = Split-Path $MyInvocation.MyCommand.Path -Parent
+Import-Module "$Script:ModulePath\NeuralLocalization.psm1" -Force -DisableNameChecking
 
 # ============================================================================
 # LOGGING SYSTEM
@@ -89,14 +95,14 @@ function Invoke-AdminCheck {
     if (-not $Silent) {
         Write-Host ""
         Write-Host " +========================================================+" -ForegroundColor Yellow
-        Write-Host " |  [!] SE REQUIEREN PERMISOS DE ADMINISTRADOR            |" -ForegroundColor Yellow
+        Write-Host " |  [!] $(Msg 'Utils.Admin.Title'.PadRight(50).Substring(0,50))|" -ForegroundColor Yellow
         Write-Host " +========================================================+" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host " [i] Solicitando permisos de administrador..." -ForegroundColor Cyan
+        Write-Host " [i] $(Msg 'Utils.Admin.Request')" -ForegroundColor Cyan
     }
 
     try {
-        Write-Host " [X] ERROR: Reinicie como Administrador." -ForegroundColor Red
+        Write-Host " [X] $(Msg 'Utils.Admin.Error')" -ForegroundColor Red
         Wait-ForKeyPress
         exit 1
     }
@@ -105,12 +111,21 @@ function Invoke-AdminCheck {
     }
 }
 
+# ... (Existing UI Helpers code in between, skipping for brevity in replacement if contiguous is preferred, but I'll assume I need to jump to next function or use separate calls. I will use separate calls to avoid replacing too much)
+# Better to do this in chunks for safety. I'll split this into multiple chunks or just replace Invoke-AdminCheck first.
+
+
 # ============================================================================
 # UI HELPERS
 # ============================================================================
 
 function Wait-ForKeyPress {
-    param([string]$Message = "Presione cualquier tecla para continuar...")
+    param([string]$Message)
+    
+    if (-not $Message) {
+        $Message = Msg "Common.Continue"
+    }
+
     Write-Host ""
     Write-Host " $Message" -ForegroundColor DarkGray
     try { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
@@ -136,6 +151,38 @@ function Write-Step {
 # REGISTRY HELPERS
 # ============================================================================
 
+function Backup-RegistryKey {
+    param(
+        [string]$Path,
+        [string]$Name
+    )
+    
+    # Use $PSScriptRoot or fall back to module variable
+    $root = if ($PSScriptRoot) { $PSScriptRoot } else { $Script:ModulePath }
+    $backupDir = Join-Path $root "..\Backups"
+    if (-not (Test-Path $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
+    
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $safePath = $Path -replace ":", "" -replace "\\", "_"
+    $backupFile = Join-Path $backupDir "RegBackup_${safePath}_${Name}_$timestamp.reg"
+    
+    try {
+        # Export specific key logic or value dump
+        # For granular rollback, we export the parent key
+        # Using reg.exe for reliability with .reg format
+        $regPath = $Path -replace "HKLM:", "HKLM" -replace "HKCU:", "HKCU"
+        
+        $process = Start-Process -FilePath "reg.exe" -ArgumentList "export `"$regPath`" `"$backupFile`" /y" -PassThru -NoNewWindow -Wait
+        
+        if ($process.ExitCode -eq 0) {
+            Write-Log "Backup created: $backupFile" "Info"
+        }
+    }
+    catch {
+        Write-Log "Backup failed: $_" "Warning"
+    }
+}
+
 function Set-RegistryKey {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -143,12 +190,22 @@ function Set-RegistryKey {
         [Parameter(Mandatory)]$Value,
         [ValidateSet("DWord", "String", "QWord", "Binary", "MultiString", "ExpandString")]
         [string]$Type = "DWord",
-        [string]$Desc
+        [string]$Desc,
+        [switch]$SkipBackup
     )
 
     try {
         if (-not (Test-Path $Path)) { 
             New-Item -Path $Path -Force -ErrorAction SilentlyContinue | Out-Null 
+            if (-not $SkipBackup) {
+                # Note: Key didn't exist, so rollback would be "Delete Key"
+                # For now we just log creation
+            }
+        }
+        else {
+            if (-not $SkipBackup) {
+                Backup-RegistryKey -Path $Path -Name $Name
+            }
         }
         
         Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -Force -ErrorAction Stop
@@ -160,7 +217,7 @@ function Set-RegistryKey {
     }
     catch {
         if ($Desc) {
-            Write-Host "   [!!] $Desc" -ForegroundColor Yellow
+            Write-Host "   [!!] $Desc - Error: $_" -ForegroundColor Yellow
         }
         return $false
     }
@@ -209,7 +266,7 @@ function Remove-FolderSafe {
 
     if ($Desc) {
         if ($freed -gt 0.1) {
-            Write-Host "   [OK] $Desc - Liberado: $freed MB" -ForegroundColor Green
+            Write-Host "   [OK] $Desc - $(Msg 'Utils.FS.Freed' $freed)" -ForegroundColor Green
         }
         else {
             Write-Host "   [--] $Desc" -ForegroundColor DarkGray
@@ -217,6 +274,74 @@ function Remove-FolderSafe {
     }
     
     return $freed
+}
+
+# ============================================================================
+# OS COMPATIBILITY
+# ============================================================================
+
+function Get-WindowsVersion {
+    <#
+    .SYNOPSIS
+    Detects Windows version (10 vs 11) and build number
+    #>
+    try {
+        $os = Get-CimInstance Win32_OperatingSystem
+        $build = [int]$os.BuildNumber
+        
+        $version = @{
+            Name        = "Unknown"
+            Build       = $build
+            IsSupported = $false
+        }
+        
+        if ($build -ge 22000) {
+            $version.Name = "Windows 11"
+            $version.IsSupported = $true
+        }
+        elseif ($build -ge 10240 -and $build -lt 22000) {
+            $version.Name = "Windows 10"
+            $version.IsSupported = $true
+        }
+        else {
+            $version.Name = "Windows $($os.Version)"
+            $version.IsSupported = $false
+        }
+        
+        return $version
+    }
+    catch {
+        return @{ Name = "Unknown"; Build = 0; IsSupported = $false }
+    }
+}
+
+function Assert-SupportedOS {
+    <#
+    .SYNOPSIS
+    Validates that Windows version is supported. Exits if not.
+    #>
+    $version = Get-WindowsVersion
+    
+    Write-Host " [i] Detected: $($version.Name) (Build $($version.Build))" -ForegroundColor Cyan
+    
+    if (-not $version.IsSupported) {
+        Write-Host ""
+        Write-Host " +========================================================+" -ForegroundColor Red
+        Write-Host " |  ⚠️ UNSUPPORTED WINDOWS VERSION                        |" -ForegroundColor Red
+        Write-Host " +========================================================+" -ForegroundColor Red
+        Write-Host ""
+        Write-Host " Neural Optimizer requires Windows 10 (Build 10240+) or Windows 11." -ForegroundColor Yellow
+        Write-Host " Your version: $($version.Name) (Build $($version.Build))" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host " Continuing may cause system instability." -ForegroundColor Red
+        Write-Host ""
+        
+        $confirm = Read-Host " >> Continue anyway? (type 'I UNDERSTAND THE RISK')"
+        if ($confirm -ne "I UNDERSTAND THE RISK") {
+            Write-Host " [i] Exiting for safety..." -ForegroundColor Yellow
+            exit 1
+        }
+    }
 }
 
 # ============================================================================
@@ -318,24 +443,24 @@ function New-SystemRestorePoint {
     param([string]$Description = "Neural Optimizer Auto-Restore")
     
     Write-Section "SYSTEM SAFETY CHECK"
-    Write-Host " [i] Verificando Sistema de Restauracion..." -ForegroundColor Cyan
+    Write-Host " [i] $(Msg 'Utils.Restore.Check')" -ForegroundColor Cyan
     
     try {
         $null = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         
         if (-not (Test-AdminPrivileges)) {
-            Write-Host " [!] Se requieren permisos de Admin." -ForegroundColor Yellow
+            Write-Host " [!] $(Msg 'Common.AdminRequired')" -ForegroundColor Yellow
             return $false
         }
 
-        Write-Host " [+] Creando Punto de Restauracion: '$Description'..." -ForegroundColor Cyan
+        Write-Host " [+] $(Msg 'Utils.Restore.Creating' $Description)" -ForegroundColor Cyan
         Checkpoint-Computer -Description $Description -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop | Out-Null
         
-        Write-Host " [OK] Punto de Restauracion Creado Exitosamente." -ForegroundColor Green
+        Write-Host " [OK] $(Msg 'Utils.Restore.Success')" -ForegroundColor Green
         return $true
     }
     catch {
-        Write-Host " [!] No se pudo crear el Punto de Restauracion." -ForegroundColor Red
+        Write-Host " [!] $(Msg 'Utils.Restore.Fail')" -ForegroundColor Red
         return $false
     }
 }
@@ -347,11 +472,11 @@ function Invoke-Rollback {
         $points = Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Sort-Object CreationTime -Descending
         
         if (-not $points) {
-            Write-Host " [!] No hay puntos de restauración disponibles." -ForegroundColor Red
+            Write-Host " [!] $(Msg 'Utils.Rollback.NoPoints')" -ForegroundColor Red
             return
         }
         
-        Write-Host " Puntos de restauración recientes:" -ForegroundColor Cyan
+        Write-Host " $(Msg 'Utils.Rollback.Recent')" -ForegroundColor Cyan
         Write-Host ""
         
         $i = 1
@@ -362,15 +487,16 @@ function Invoke-Rollback {
         }
         
         Write-Host ""
-        $choice = Read-Host " >> Seleccione número para restaurar (0 para cancelar)"
+        $choice = Read-Host " >> $(Msg 'Utils.Rollback.Select')"
         
         if ($choice -match '^\d+$' -and $choice -gt 0 -and $choice -le $points.Count) {
             $selected = $points[$choice - 1]
             Write-Host ""
-            Write-Host " [!] ADVERTENCIA: El sistema se reiniciará para restaurar: $($selected.Description)" -ForegroundColor Yellow
-            $confirm = Read-Host " >> ¿Continuar? (S/N)"
+            Write-Host " [!] $(Msg 'Utils.Rollback.Warning' $selected.Description)" -ForegroundColor Yellow
+            $confirm = Read-Host " >> $(Msg 'Utils.Rollback.Confirm')"
             
-            if ($confirm -match '^[Ss]') {
+            if ($confirm -match '^[SsYy]') {
+                # Check S or Y for ES/EN support
                 Restore-Computer -RestorePoint $selected -Confirm:$false
             }
         }
@@ -409,7 +535,7 @@ function Get-PerformanceReport {
     
     if (Test-Path $historyLog) {
         $lines = Get-Content $historyLog -Tail 20
-        Write-Host " Actividad reciente:" -ForegroundColor Cyan
+        Write-Host " $(Msg 'Utils.Hw.Recent')" -ForegroundColor Cyan
         foreach ($line in $lines) {
             if ($line -match "ERROR") {
                 Write-Host " $line" -ForegroundColor Red
@@ -423,7 +549,7 @@ function Get-PerformanceReport {
         }
     }
     else {
-        Write-Host " No hay historial disponible." -ForegroundColor Gray
+        Write-Host " $(Msg 'Utils.Hw.NoHistory')" -ForegroundColor Gray
     }
     
     Write-Host ""
@@ -437,17 +563,70 @@ function Show-HardwareInfo {
     Write-Host " Speed:   $($hw.CpuMaxSpeed) MHz" -ForegroundColor Gray
     Write-Host " RAM:     $($hw.RamGB) GB @ $($hw.RamSpeed) MHz" -ForegroundColor White
     Write-Host " GPU:     $($hw.GpuName) ($($hw.GpuVendor))" -ForegroundColor White
-    Write-Host " Storage: $(if($hw.IsNVMe){"NVMe"}elseif($hw.IsSSD){"SSD"}else{"HDD"})" -ForegroundColor White
+    
+    $storageType = if ($hw.IsNVMe) { "NVMe" }elseif ($hw.IsSSD) { "SSD" }else { "HDD" }
+    Write-Host " $(Msg 'Utils.Hw.Storage' $storageType)" -ForegroundColor White
     
     Write-Host ""
     
     $nic = Get-ActiveNetworkAdapter
     if ($nic) {
-        Write-Host " Network: $($nic.Name)" -ForegroundColor White
-        Write-Host " Speed:   $($nic.LinkSpeed)" -ForegroundColor Gray
+        Write-Host " $(Msg 'Utils.Hw.Network' $nic.Name)" -ForegroundColor White
+        Write-Host " $(Msg 'Utils.Hw.Speed' $nic.LinkSpeed)" -ForegroundColor Gray
     }
     
     Write-Host ""
 }
 
-Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo
+# ============================================================================
+# CONFIGURATION SYSTEM
+# ============================================================================
+
+$Script:ConfigPath = Join-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) "..\NeuralConfig.json"
+
+function Get-NeuralConfig {
+    if (Test-Path $Script:ConfigPath) {
+        try {
+            $json = Get-Content $Script:ConfigPath -Raw
+            return ConvertFrom-Json $json
+        }
+        catch {
+            Write-Log "ERROR" "Failed to load config: $_"
+            return $null
+        }
+    }
+    return $null
+}
+
+function Set-NeuralConfig {
+    param(
+        [string]$Key,
+        [string]$Value
+    )
+    
+    $config = @{}
+    if (Test-Path $Script:ConfigPath) {
+        try {
+            $existing = Get-Content $Script:ConfigPath -Raw | ConvertFrom-Json
+            # Convert PSCustomObject to Hashtable for modification
+            if ($existing) {
+                $existing.PSObject.Properties | ForEach-Object { $config[$_.Name] = $_.Value }
+            }
+        }
+        catch {
+            Write-Log "WARN" "Config corrupted, resetting."
+        }
+    }
+    
+    $config[$Key] = $Value
+    
+    try {
+        $config | ConvertTo-Json | Set-Content $Script:ConfigPath
+        Write-Log "Config updated: $Key = $Value" "Info"
+    }
+    catch {
+        Write-Log "Failed to save config: $_" "Error"
+    }
+}
+
+Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig

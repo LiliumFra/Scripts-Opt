@@ -21,11 +21,11 @@ function Optimize-Gaming {
     [CmdletBinding()]
     param()
     
-    Write-Section "GAMING & PERFORMANCE v3.5 (DEEP TUNED)"
+    Write-Section (Msg "Game.Title")
     
     # Hardware Detection
     $hw = Get-HardwareProfile
-    Write-Host " [i] Hardware Detectado:" -ForegroundColor Cyan
+    Write-Host " [i] $(Msg 'Game.Hw.Detected')" -ForegroundColor Cyan
     Write-Host "     CPU: $($hw.CpuVendor)" -ForegroundColor Gray
     Write-Host "     RAM: $($hw.RamGB) GB" -ForegroundColor Gray
     Write-Host "     SSD: $($hw.IsSSD)" -ForegroundColor Gray
@@ -37,14 +37,14 @@ function Optimize-Gaming {
     # 1. GAME MODE & XBOX GAME BAR
     # =========================================================================
     
-    Write-Step "[1/10] CONFIGURACION GAME MODE"
+    Write-Step (Msg "Game.Step.GameMode")
     
     $gameModeKeys = @(
-        @{ Path = "HKCU:\Software\Microsoft\GameBar"; Name = "AllowAutoGameMode"; Value = 1; Desc = "Auto Game Mode ON" },
-        @{ Path = "HKCU:\Software\Microsoft\GameBar"; Name = "AutoGameModeEnabled"; Value = 1; Desc = "Game Mode Enabled" },
-        @{ Path = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\ApplicationManagement\AllowGameDVR"; Name = "value"; Value = 0; Desc = "Game DVR OFF" },
-        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_Enabled"; Value = 0; Desc = "DVR Recording OFF" },
-        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_FSEBehaviorMode"; Value = 2; Desc = "FSE Behavior optimizado" },
+        @{ Path = "HKCU:\Software\Microsoft\GameBar"; Name = "AllowAutoGameMode"; Value = 1; Desc = (Msg "Game.Desc.GameModeAuto") },
+        @{ Path = "HKCU:\Software\Microsoft\GameBar"; Name = "AutoGameModeEnabled"; Value = 1; Desc = (Msg "Game.Desc.GameModeEnabled") },
+        @{ Path = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\ApplicationManagement\AllowGameDVR"; Name = "value"; Value = 0; Desc = (Msg "Game.Desc.DVR") },
+        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_Enabled"; Value = 0; Desc = (Msg "Game.Desc.DVR") },
+        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_FSEBehaviorMode"; Value = 2; Desc = (Msg "Game.Desc.FSE") },
         @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_DXGIHonorFSEWindowsCompatible"; Value = 1; Desc = "FSE Windows Compatible" },
         @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_HonorUserFSEBehaviorMode"; Value = 1; Desc = "Honor FSE Mode" }
     )
@@ -59,10 +59,10 @@ function Optimize-Gaming {
     # 2. GPU SCHEDULING & DX12
     # =========================================================================
     
-    Write-Step "[2/10] GPU SCHEDULING & DIRECTX"
+    Write-Step (Msg "Game.Step.GPU")
     
     $gpuKeys = @(
-        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"; Name = "HwSchMode"; Value = 2; Desc = "Hardware GPU Scheduling ON" },
+        @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"; Name = "HwSchMode"; Value = 2; Desc = (Msg "Game.Desc.HAGS") },
         @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"; Name = "TdrLevel"; Value = 0; Desc = "TDR deshabilitado (anti-crash)" },
         @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"; Name = "TdrDelay"; Value = 60; Desc = "TDR Delay 60s" },
         @{ Path = "HKLM:\SOFTWARE\Microsoft\DirectX"; Name = "D3D12_ENABLE_UNSAFE_COMMAND_BUFFER_REUSE"; Value = 1; Desc = "DX12 Command Buffer Reuse" },
@@ -108,7 +108,7 @@ function Optimize-Gaming {
     Write-Step "[4/10] OPTIMIZACIONES NVIDIA"
     
     # Basic detect from profile works, but we also check WMI for details if needed
-    $hasNvidia = (Get-WmiObject Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" })
+    $hasNvidia = (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" })
     
     if ($hasNvidia) {
         $nvidiaKeys = @(
@@ -139,7 +139,7 @@ function Optimize-Gaming {
     
     Write-Step "[5/10] OPTIMIZACIONES AMD"
     
-    $hasAMD = (Get-WmiObject Win32_VideoController | Where-Object { $_.Name -match "AMD|Radeon" })
+    $hasAMD = (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "AMD|Radeon" })
     
     if ($hasAMD) {
         $amdKeys = @(
@@ -170,7 +170,7 @@ function Optimize-Gaming {
     
     Write-Step "[6/10] OPTIMIZACIONES INTEL GPU"
     
-    $hasIntel = (Get-WmiObject Win32_VideoController | Where-Object { $_.Name -match "Intel" })
+    $hasIntel = (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "Intel" })
     
     if ($hasIntel) {
         $intelKeys = @(
@@ -243,47 +243,13 @@ function Optimize-Gaming {
     }
     
     # =========================================================================
-    # 9. SMART PACKET HANDLING (DEEP NETWORK TUNING)
+    # 9. SMART PACKET HANDLING
     # =========================================================================
     
-    Write-Step "[9/10] OPTIMIZACION RED INTELIGENTE (Smart Ping)"
+    # Delegated to Network-Optimizer.ps1
+    # Redundancy removed in v6.1 update
     
-    $activeNic = Get-ActiveNetworkAdapter
-    
-    if ($activeNic) {
-        Write-Host "   [i] Adaptador Activo: $($activeNic.Name)" -ForegroundColor Cyan
-        
-        # Get Registry Key for NIC
-        $nicGuid = $activeNic.InterfaceGuid
-        $nicKey = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$nicGuid"
-        
-        # Apply Nagle's Algorithm Disable ONLY to active gaming NIC
-        if (Set-RegistryKey -Path $nicKey -Name "TcpAckFrequency" -Value 1 -Desc "TcpAckFrequency (Gaming Mode)") { $appliedTweaks++ }
-        if (Set-RegistryKey -Path $nicKey -Name "TCPNoDelay" -Value 1 -Desc "TCPNoDelay (Low Latency)") { $appliedTweaks++ }
-        
-        # Disable Flow Control if possible (PowerShell Cmdlet)
-        try {
-            if (Get-Command "Disable-NetAdapterFlowControl" -ErrorAction SilentlyContinue) {
-                Disable-NetAdapterFlowControl -Name $activeNic.Name -ErrorAction SilentlyContinue
-                Write-Host "   [OK] Flow Control deshabilitado" -ForegroundColor Green
-                $appliedTweaks++
-            }
-            
-            # Disable Energy Efficient Ethernet (Green Ethernet) - KILLER for Latency
-            # We try to disable common EEE properties via Set-NetAdapterAdvancedProperty
-            $eeeProps = @("*EEE", "*GreenEthernet", "Energy Efficient Ethernet", "Green Ethernet", "*PowerSaving", "*FlowControl")
-            foreach ($prop in $eeeProps) {
-                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName $prop -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName $prop -DisplayValue "Off" -ErrorAction SilentlyContinue
-            }
-            Write-Host "   [OK] Green Ethernet / EEE Deshabilitado (Deep Tweak)" -ForegroundColor Green
-            $appliedTweaks++
-        }
-        catch {}
-    }
-    else {
-        Write-Host "   [!] No se detecto adaptador de red activo." -ForegroundColor Yellow
-    }
+    # =========================================================================
     
     # =========================================================================
     # 10. SYSTEM LATENCY TWEAKS
@@ -376,8 +342,6 @@ function Optimize-Gaming {
             # GUID: 984cf492-3bed-4488-a8f9-4286c97bf5aa
             powercfg -setacvalueindex scheme_current $subProc 984cf492-3bed-4488-a8f9-4286c97bf5aa 1
             
-            # 8. Decrease Time: 500ms -> Mantiene Freq alta medio segundo tras soltar carga (evita micro-lags)
-            # GUID: d8ed251d-a688-4662-9550-5d93975002dd
             # 8. Decrease Time: 500ms -> Mantiene Freq alta medio segundo tras soltar carga (evita micro-lags)
             # GUID: d8ed251d-a688-4662-9550-5d93975002dd
             powercfg -setacvalueindex scheme_current $subProc d8ed251d-a688-4662-9550-5d93975002dd 500

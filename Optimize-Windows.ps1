@@ -44,6 +44,10 @@ if (-not (Test-Path $Script:UtilsPath)) {
 }
 
 Import-Module $Script:UtilsPath -Force -DisableNameChecking
+Import-Module "d:\josef\Documents\Scripts Opt\NeuralModules\NeuralLocalization.psm1" -Force -DisableNameChecking
+
+# CRITICAL: Validate OS before proceeding
+Assert-SupportedOS
 
 # ============================================================================
 # AUTO-ELEVACIÓN
@@ -183,22 +187,27 @@ function Show-Banner {
     $hw = Get-HardwareProfile
     
     Write-Host ""
-    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Magenta
-    Write-Host " ║                                                       ║" -ForegroundColor Magenta
-    Write-Host " ║     🚀 NEURAL OPTIMIZER v5.0 ULTRA 🚀                ║" -ForegroundColor Magenta
-    Write-Host " ║     Advanced Windows Optimization Suite              ║" -ForegroundColor Magenta
-    Write-Host " ║                                                       ║" -ForegroundColor Magenta
-    Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Magenta
+    Write-Host " +=================================================================+" -ForegroundColor Cyan
+    Write-Host " |             $(Msg 'Menu.Title')             |" -ForegroundColor Cyan
+    Write-Host " +=================================================================+" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "   💻 CPU: " -NoNewline -ForegroundColor DarkGray
-    Write-Host "$($hw.CpuVendor) ($($hw.CpuCores)C/$($hw.CpuThreads)T @ $($hw.CpuMaxSpeed)MHz)" -ForegroundColor Gray
-    Write-Host "   🎮 GPU: " -NoNewline -ForegroundColor DarkGray
-    Write-Host "$($hw.GpuVendor) - $($hw.GpuName)" -ForegroundColor Gray
-    Write-Host "   💾 RAM: " -NoNewline -ForegroundColor DarkGray
-    Write-Host "$($hw.RamGB) GB @ $($hw.RamSpeed) MHz" -ForegroundColor Gray
-    Write-Host "   💿 Storage: " -NoNewline -ForegroundColor DarkGray
-    Write-Host "$(if($hw.IsNVMe){"NVMe SSD"}elseif($hw.IsSSD){"SATA SSD"}else{"HDD"})" -ForegroundColor Gray
+    Write-Host " System: $($hw.CpuVendor) | RAM: $($hw.RamGB)GB | GPU: $($hw.GpuName)" -ForegroundColor DarkGray
+    Write-Host " Lang:   $($global:NeuralLang) (Auto-Detected)" -ForegroundColor DarkGray
     Write-Host ""
+    Write-Host " [1] $(Msg 'Menu.Option.1')" -ForegroundColor White
+    Write-Host " [2] $(Msg 'Menu.Option.2')" -ForegroundColor White
+    Write-Host " [3] $(Msg 'Menu.Option.3')" -ForegroundColor White
+    Write-Host " [4] $(Msg 'Menu.Option.4')" -ForegroundColor White
+    Write-Host " [5] $(Msg 'Menu.Option.5')" -ForegroundColor White
+    Write-Host " [6] $(Msg 'Menu.Option.6')" -ForegroundColor White
+    Write-Host " [7] $(Msg 'Menu.Option.7')" -ForegroundColor White
+    Write-Host " [8] $(Msg 'Menu.Option.8')" -ForegroundColor White
+    Write-Host " [9] $(Msg 'Menu.Option.9')" -ForegroundColor White
+    Write-Host ""
+    Write-Host " [X] $(Msg 'Menu.Option.X')" -ForegroundColor Red
+    Write-Host ""
+    
+    return Read-Host " >> Seleccione una opción / Select option"
 }
 
 function Show-Menu {
@@ -215,7 +224,7 @@ function Show-Menu {
     Write-Host " ║ 🔥 OPTIMIZACIONES ULTRA (NUEVO v5.0)                  ║" -ForegroundColor Magenta
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
     Write-Host " ║ 7.  [ULTRA]    🎮 Advanced Gaming (MSI, HPET, Net)   ║" -ForegroundColor Magenta
-    Write-Host " ║ 8.  [MEMORY]   💾 Advanced Memory (Pools, Paging)    ║" -ForegroundColor Magenta
+    Write-Host " ║ 8.  [MEMORY]     Advanced Memory (Pools, Paging)     ║" -ForegroundColor Magenta
     Write-Host " ║ 9.  [SSD]      💿 SSD/NVMe Optimizer (TRIM, Health)  ║" -ForegroundColor Magenta
     Write-Host " ║ 10. [PROFILE]  🎯 Profile System (Presets)           ║" -ForegroundColor Magenta
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
@@ -343,7 +352,7 @@ while ($true) {
     switch ($selection) {
         '1' { Invoke-OptimizationModule -Name "BOOT OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Boot-Optimization.ps1"); Wait-ForKeyPress }
         '2' { Invoke-OptimizationModule -Name "DEBLOAT SUITE" -ScriptPath (Join-Path $Script:ModuleDir "Debloat-Suite.ps1"); Wait-ForKeyPress }
-        '3' { Invoke-OptimizationModule -Name 'DISK & NETWORK' -ScriptPath (Join-Path $Script:ModuleDir "Disk-Hygiene.ps1"); Wait-ForKeyPress }
+        '3' { Invoke-OptimizationModule -Name "DISK and NETWORK" -ScriptPath (Join-Path $Script:ModuleDir "Disk-Hygiene.ps1"); Wait-ForKeyPress }
         '4' { Invoke-OptimizationModule -Name "GAMING OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Gaming-Optimization.ps1"); Wait-ForKeyPress }
         '5' { Invoke-OptimizationModule -Name "THERMAL OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1"); Wait-ForKeyPress }
         '6' {

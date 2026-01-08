@@ -81,6 +81,23 @@ function Optimize-HPET {
     param()
     
     Write-Step "[ULTRA] HPET OPTIMIZATION"
+
+    # ⚠️ CRITICAL CHECK: Detect Vanguard before modifying HPET
+    $vanguardProcesses = Get-Process | Where-Object { $_.Name -like "*vgc*" -or $_.Name -like "*vgtray*" }
+    
+    if ($vanguardProcesses) {
+        Write-Host ""
+        Write-Host " +========================================================+" -ForegroundColor Red
+        Write-Host " |  ⚠️ VALORANT (VANGUARD) DETECTADO                      |" -ForegroundColor Red
+        Write-Host " +========================================================+" -ForegroundColor Red
+        Write-Host ""
+        Write-Host " Vanguard REQUIERE HPET habilitado." -ForegroundColor Yellow
+        Write-Host " Deshabilitar HPET causará BAN PERMANENTE." -ForegroundColor Red
+        Write-Host ""
+        Write-Host " HPET optimization será OMITIDO por seguridad." -ForegroundColor Yellow
+        Write-Host ""
+        return
+    }
     
     Write-Host " [i] Deshabilitando HPET para mejor frame timing..." -ForegroundColor Cyan
     Write-Host " [i] HPET puede causar micro-stuttering en algunos sistemas" -ForegroundColor DarkGray

@@ -246,7 +246,37 @@ function Set-GameOptimizations {
         # CPU Priority
         try {
             $priorityClass = switch ($GameInfo.Priority) {
-                "RealTime" { [System.Diagnostics.ProcessPriorityClass]::RealTime }
+                "RealTime" {
+                    # ⚠️ SAFETY: Warn and require confirmation
+                    Write-Host ""
+                    Write-Host " +========================================================+" -ForegroundColor Red
+                    Write-Host " |  ⚠️ ADVERTENCIA: REALTIME PRIORITY                     |" -ForegroundColor Red
+                    Write-Host " +========================================================+" -ForegroundColor Red
+                    Write-Host ""
+                    Write-Host " RealTime priority puede:" -ForegroundColor Yellow
+                    Write-Host "   • Congelar el sistema si el juego crashea" -ForegroundColor Gray
+                    Write-Host "   • Ser detectado por anti-cheat (BattlEye, Vanguard)" -ForegroundColor Gray
+                    Write-Host "   • Causar inestabilidad en Windows" -ForegroundColor Gray
+                    Write-Host ""
+                    $confirm = Read-Host " >> ¿Continuar de todas formas? (escriba 'ACEPTO RIESGO')"
+                    
+                    if ($confirm -ne "ACEPTO RIESGO") {
+                        Write-Host " [i] Usando High Priority en lugar de RealTime" -ForegroundColor Cyan
+                        [System.Diagnostics.ProcessPriorityClass]::High
+                    }
+                    else {
+                        # Auto-revert to High after 5 minutes
+                        Start-Job -ScriptBlock {
+                            Start-Sleep -Seconds 300
+                            $proc = Get-Process -Id $using:GameInfo.ProcessId -ErrorAction SilentlyContinue
+                            if ($proc) {
+                                $proc.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::High
+                                Write-Host " [i] Auto-reverted to High priority (safety timeout)" -ForegroundColor Yellow
+                            }
+                        }
+                        [System.Diagnostics.ProcessPriorityClass]::RealTime
+                    }
+                }
                 "High" { [System.Diagnostics.ProcessPriorityClass]::High }
                 "AboveNormal" { [System.Diagnostics.ProcessPriorityClass]::AboveNormal }
                 default { [System.Diagnostics.ProcessPriorityClass]::Normal }

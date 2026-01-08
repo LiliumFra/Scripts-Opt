@@ -113,10 +113,23 @@ function Optimize-Boot {
     # 1. IO Page Lock Limit
     # Determina cuánta memoria I/O se puede bloquear. Defecto es 512KB (muy bajo).
     # Calculo inteligente: 64MB para sistemas normales, hasta 256MB/512MB para sistemas grandes.
-    if ($hw.RamGB -ge 32) { $ioLimit = 0x20000000; $ioDesc = "512MB (RAM >= 32GB)" } # 512MB
-    elseif ($hw.RamGB -ge 16) { $ioLimit = 0x10000000; $ioDesc = "256MB (RAM >= 16GB)" } # 256MB
-    elseif ($hw.RamGB -ge 8) { $ioLimit = 0x4000000; $ioDesc = "64MB (RAM >= 8GB)" } # 64MB
-    else { $ioLimit = 0; $ioDesc = "Default (Low RAM)" }
+    # Calculo inteligente: 64MB para sistemas normales, hasta 256MB/512MB para sistemas grandes.
+    if ($hw.RamGB -ge 32) { 
+        $ioLimit = 0x20000000  # 512MB
+        $ioDesc = "512MB (RAM >= 32GB)" 
+    }
+    elseif ($hw.RamGB -ge 16) { 
+        $ioLimit = 0x10000000  # 256MB
+        $ioDesc = "256MB (RAM >= 16GB)" 
+    }
+    elseif ($hw.RamGB -ge 8) { 
+        $ioLimit = 0x4000000   # 64MB
+        $ioDesc = "64MB (RAM >= 8GB)" 
+    }
+    else { 
+        $ioLimit = 0x2000000   # 32MB (SAFE for low RAM systems)
+        $ioDesc = "32MB (Low RAM - Conservative)" 
+    }
     
     # 2. Svchost Split Threshold
     # Controla cómo Windows agrupa servicios. Más Split = Más Estabilidad/Aislamiento, Menos Split = Menos RAM.

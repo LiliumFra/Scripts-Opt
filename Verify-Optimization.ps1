@@ -1,43 +1,119 @@
+# Verification Script for Windows Neural Optimizer v6.0
 $ErrorActionPreference = "Stop"
 
-function Assert-Module {
-    param($Path, $Name)
-    if (Test-Path $Path) { Write-Host " [OK] Module found: $Name" -ForegroundColor Green }
-    else { Write-Host " [FAIL] Module MISSING: $Name ($Path)" -ForegroundColor Red }
+function Test-ModuleImport {
+    param($Path)
+    Write-Host " [?] Testing module: $Path" -NoNewline
+    try {
+        # Import into Global scope for functional tests
+        Import-Module $Path -Force -ErrorAction Stop -Scope Global
+        Write-Host " [OK]" -ForegroundColor Green
+    }
+    catch {
+        Write-Host " [FAIL]" -ForegroundColor Red
+        Write-Host "     $($_)" -ForegroundColor Red
+    }
 }
 
-Write-Host "Verifying Windows Neural Optimizer v5.0 ULTRA Structure..." -ForegroundColor Cyan
+Write-Host "=== NEURAL OPTIMIZER v6.0 VERIFICATION ===" -ForegroundColor Cyan
+Write-Host ""
 
-# Root
-Assert-Module "d:\josef\Documents\Scripts Opt\Optimize-Windows.ps1" "Main Controller"
-Assert-Module "d:\josef\Documents\Scripts Opt\NeuralCache-Diagnostic.ps1" "Neural Cache Root"
+# 1. Module Imports & Script Syntax Check
+$modules = @("NeuralModules\NeuralLocalization.psm1", "NeuralModules\NeuralUtils.psm1")
+$scripts = @("NeuralModules\Network-Optimizer.ps1", "NeuralModules\Gaming-Optimization.ps1", "NeuralModules\AI-Recommendations.ps1", "Optimize-Windows.ps1")
 
-# NeuralModules
-$modDir = "d:\josef\Documents\Scripts Opt\NeuralModules"
-Assert-Module "$modDir\NeuralUtils.psm1" "Neural Utils"
-Assert-Module "$modDir\AI-Recommendations.ps1" "AI Engine"
-Assert-Module "$modDir\ML-Usage-Patterns.ps1" "ML Engine"
-Assert-Module "$modDir\Network-Optimizer.ps1" "Network Optimizer"
-Assert-Module "$modDir\Service-Manager.ps1" "Service Manager"
-Assert-Module "$modDir\Privacy-Guardian.ps1" "Privacy Guardian"
-Assert-Module "$modDir\Visual-FX.ps1" "Visual FX"
-Assert-Module "$modDir\Advanced-Gaming.ps1" "Advanced Gaming"
-
-# Check Main Menu Version text
-$content = Get-Content "d:\josef\Documents\Scripts Opt\Optimize-Windows.ps1" -Raw
-if ($content -match "Version.*5.0 ULTRA") {
-    Write-Host " [OK] Version string verified as 5.0 ULTRA" -ForegroundColor Green
-}
-else {
-    Write-Host " [FAIL] Version string mismatch" -ForegroundColor Red
+foreach ($m in $modules) {
+    Test-ModuleImport -Path ".\$m"
 }
 
-# Check Network Optimizer Integration in Main Menu
-if ($content -match "Invoke-OptimizationModule.*Network-Optimizer.ps1") {
-    Write-Host " [OK] Network Optimizer hooked in Main Menu" -ForegroundColor Green
-}
-else {
-    Write-Host " [FAIL] Network Optimizer NOT linked in Main Menu" -ForegroundColor Red
+Write-Host ""
+Write-Host " [?] Verifying Script Syntax..."
+foreach ($s in $scripts) {
+    $path = ".\$s"
+    if (Test-Path $path) {
+        $errors = $null
+        try {
+            $tokens = [System.Management.Automation.PSParser]::Tokenize((Get-Content $path -Raw -Encoding UTF8), [ref]$errors)
+            if ($errors) {
+                Write-Host " [FAIL] $s" -ForegroundColor Red
+                foreach ($err in $errors) {
+                    Write-Host "     Line $($err.Token.StartLine): $($err.Message)" -ForegroundColor Red
+                }
+            }
+            else {
+                Write-Host " [OK] $s (Syntax Valid)" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host " [ERROR] Failed to parse $s : $_" -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host " [MISSING] $s" -ForegroundColor Yellow
+    }
 }
 
-Write-Host "Verification Complete."
+# 2. Test Configuration & Localization
+Write-Host ""
+Write-Host " [?] Testing NeuralConfig..."
+try {
+    $config = Get-NeuralConfig
+    if ($null -ne $config) {
+        Write-Host "     Loaded Config: $($config | ConvertTo-Json -Compress)" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "     Config not found or empty (Expected if first run)" -ForegroundColor Yellow
+    }
+    
+    # Test Language Switch
+    Set-Language "EN"
+    $msg = Msg "Utils.Rollback.Confirm"
+    Write-Host "     EN Test: $msg" -ForegroundColor Gray
+    
+    Set-Language "ES"
+    $msg = Msg "Utils.Rollback.Confirm"
+    Write-Host "     ES Test: $msg" -ForegroundColor Gray
+    
+    Write-Host " [OK] Localization System" -ForegroundColor Green
+}
+catch {
+    Write-Host " [FAIL] Localization System: $_" -ForegroundColor Red
+}
+
+# 3. Test Registry Backup (Safe Test)
+Write-Host ""
+Write-Host " [?] Testing Registry Backup (HKCU Safe Key)..."
+try {
+    $testKey = "HKCU:\Software\NeuralTest"
+    if (-not (Test-Path $testKey)) { New-Item $testKey -Force | Out-Null }
+    
+    # Create a value to backup
+    Set-ItemProperty $testKey -Name "TestValue" -Value 123
+    
+    # Test Backup via Set-RegistryKey (should trigger backup)
+    # We flip SkipBackup to $false (default is now $false for switch? No, we refactored to -SkipBackup.
+    # So calling WITHOUT -SkipBackup should trigger backup.
+    
+    Set-RegistryKey -Path $testKey -Name "TestValue" -Value 456 -Desc "Test Backup Trigger"
+    
+    $backupDir = "Backups"
+    if (Test-Path $backupDir) {
+        $latest = Get-ChildItem $backupDir | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($latest) {
+            Write-Host "     Backup created: $($latest.Name)" -ForegroundColor Gray
+            Write-Host " [OK] Registry Backup System" -ForegroundColor Green
+        }
+        else {
+            Write-Host " [FAIL] No backup file found" -ForegroundColor Red
+        }
+    }
+    
+    # Cleanup
+    Remove-Item $testKey -Recurse -Force
+}
+catch {
+    Write-Host " [FAIL] Registry Backup: $_" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "=== VERIFICATION COMPLETE ===" -ForegroundColor Cyan

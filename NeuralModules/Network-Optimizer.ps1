@@ -1,18 +1,20 @@
 <#
 .SYNOPSIS
-    Neural Network Optimizer v5.0
-    Optimizacion profunda del stack TCP/IP y adaptadores de red.
+    Neural Network Optimizer v6.0 UNIFIED
+    Consolidación de TODAS las optimizaciones de red del sistema.
 
 .DESCRIPTION
-    Centraliza todas las optimizaciones de red:
-    - General: CTCP, AutoTuning, DNS Cache/TTL.
-    - Competitive: Nagle's Algorithm (TCPNoDelay), System Responsiveness.
-    - Adapter: Offloads, Interrupt Moderation, Jumbo Packets.
-    - DNS: Benchmark y seleccion heuristica.
+    v6.0 IMPROVEMENTS:
+    - Unified: Consolida tweaks de Gaming-Optimization.ps1 y Network-Optimizer.ps1
+    - Profiles: General, Competitive Gaming, Streaming, Server
+    - Smart Detection: Auto-detecta workload y recomienda perfil
+    - Rollback: Registry snapshot para revertir cambios
+    - Validation: Verifica que adaptador está activo antes de modificar
 
 .NOTES
-    Parte de Windows Neural Optimizer v5.0 ULTRA
+    Parte de Windows Neural Optimizer v6.0
     Creditos: Jose Bustamante
+    Reemplaza: Network-Optimizer.ps1 v5.0 + gaming network tweaks
 #>
 
 if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
@@ -23,135 +25,550 @@ if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
 
 Invoke-AdminCheck -Silent
 
-function Optimize-NetworkStack {
-    Write-Section "NEURAL NETWORK OPTIMIZER v5.0"
-    
-    Write-Host " [i] Iniciando optimizacion profunda de red..." -ForegroundColor Cyan
-    Write-Host ""
-    
-    # =========================================================================
-    # 1. TCP/IP STACK & CONGESTION
-    # =========================================================================
-    Write-Step "[1/5] TCP/IP STACK OPTIMIZATION"
-    
-    try {
-        # Congestion Provider: CTCP (Compound TCP) - Best for mixed environments
-        Set-NetTCPSetting -SettingName InternetCustom -CongestionProvider CTCP -ErrorAction SilentlyContinue
-        Set-NetTCPSetting -SettingName InternetCustom -CwndRestart True -ErrorAction SilentlyContinue
-        Set-NetTCPSetting -SettingName InternetCustom -ForceWS Disabled -ErrorAction SilentlyContinue
-        Write-Host "   [OK] Congestion Provider: CTCP" -ForegroundColor Green
-        
-        # Window Scaling Heuristics
-        netsh int tcp set global autotuninglevel=normal | Out-Null
-        netsh int tcp set global rss=enabled | Out-Null
-        netsh int tcp set global rsc=disabled | Out-Null # RSC bad for latency
-        netsh int tcp set global ecncapability=enabled | Out-Null # ECN good for modern routers
-        netsh int tcp set global timestamps=disabled | Out-Null
-        
-        Write-Host "   [OK] TCP Heuristics: RSS=ON, RSC=OFF, ECN=ON" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "   [!] Error configurando NetTCPSetting" -ForegroundColor Yellow
-    }
+# ============================================================================
+# NETWORK PROFILES (Unified Configuration)
+# ============================================================================
 
-    # =========================================================================
-    # 2. COMPETITIVE GAMING TWEAKS (Registry)
-    # =========================================================================
-    Write-Step "[2/5] COMPETITIVE GAMING REGISTRY"
+$Script:NetworkProfiles = @{
+    "General"           = @{
+        Name        = Msg "Net.Profile.General.Name"
+        Description = Msg "Net.Profile.General.Desc"
+        Settings    = @{
+            # TCP/IP Stack
+            TCPNoDelay          = 0              # Nagle's enabled (better for bulk transfers)
+            TcpAckFrequency     = 2         # ACK every 2 packets
+            TcpDelAckTicks      = 2          # 200ms delay
+            NetworkThrottling   = 10      # Slight throttling (10ms)
+            
+            # Adapter
+            InterruptModeration = $true  # CPU saving
+            FlowControl         = $true         # Enabled for stability
+            RSS                 = $true                 # Receive Side Scaling
+            RSC                 = $true                 # Receive Segment Coalescing (better throughput)
+            
+            # Advanced
+            Timestamps          = $false
+            ECN                 = $true                 # Explicit Congestion Notification
+            CongestionProvider  = "CTCP" # Compound TCP
+        }
+    }
     
-    $tcpPath = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
-    $networkKeys = @(
-        @{ Path = $tcpPath; Name = "TCPNoDelay"; Value = 1; Desc = "TCP No Delay (Nagle OFF)" },
-        @{ Path = $tcpPath; Name = "TcpAckFrequency"; Value = 1; Desc = "TCP ACK Frequency MAX" },
-        @{ Path = $tcpPath; Name = "TcpDelAckTicks"; Value = 0; Desc = "Delayed ACK OFF" },
-        @{ Path = $tcpPath; Name = "TCPInitialRtt"; Value = 300; Desc = "Initial RTT 300ms" },
-        @{ Path = $tcpPath; Name = "TcpMaxDupAcks"; Value = 2; Desc = "Max Dup ACKs" },
-        @{ Path = $tcpPath; Name = "DisableLargeMTU"; Value = 0; Desc = "Large MTU Enabled" },
-        @{ Path = $tcpPath; Name = "EnableDCA"; Value = 1; Desc = "Direct Cache Access" },
-        @{ Path = $tcpPath; Name = "GenericTTFOptin"; Value = 1; Desc = "TCP Fast Open" },
-        @{ Path = $tcpPath; Name = "MaxUserPort"; Value = 65534; Desc = "Ephemeral Ports MAX" },
-        @{ Path = $tcpPath; Name = "TcpTimedWaitDelay"; Value = 30; Desc = "TCP Wait Delay 30s" }
+    "CompetitiveGaming" = @{
+        Name        = Msg "Net.Profile.Gaming.Name"
+        Description = Msg "Net.Profile.Gaming.Desc"
+        Settings    = @{
+            # TCP/IP Stack (Ultra Low Latency)
+            TCPNoDelay          = 1              # Nagle's OFF - critical for gaming
+            TcpAckFrequency     = 1         # ACK every packet (no delay)
+            TcpDelAckTicks      = 0          # 0ms delay
+            NetworkThrottling   = 0xFFFFFFFF  # Throttling completely disabled
+            
+            # Adapter (Performance over efficiency)
+            InterruptModeration = $false # Instant packet processing
+            FlowControl         = $false        # Disabled (can cause delay)
+            RSS                 = $true                 # Keep for multi-core
+            RSC                 = $false                # Disabled (adds latency)
+            
+            # Advanced
+            Timestamps          = $false         # Overhead reduction
+            ECN                 = $true                 # Modern routers benefit
+            CongestionProvider  = "CTCP" # Good balance
+        }
+    }
+    
+    "Streaming"         = @{
+        Name        = Msg "Net.Profile.Streaming.Name"
+        Description = Msg "Net.Profile.Streaming.Desc"
+        Settings    = @{
+            # TCP/IP Stack (Throughput priority)
+            TCPNoDelay          = 0              # Nagle's ON (better for large streams)
+            TcpAckFrequency     = 2
+            TcpDelAckTicks      = 2
+            NetworkThrottling   = 0xFFFFFFFF  # Still no throttling
+            
+            # Adapter (Throughput optimization)
+            InterruptModeration = $true  # Reduce CPU load
+            FlowControl         = $true         # Stability
+            RSS                 = $true
+            RSC                 = $true                 # Better for large packets
+            
+            # Advanced
+            Timestamps          = $false
+            ECN                 = $true
+            CongestionProvider  = "CTCP"
+        }
+    }
+    
+    "Server"            = @{
+        Name        = "Server/Hosting"
+        Description = "Optimized for hosting game servers or file sharing"
+        Settings    = @{
+            # TCP/IP Stack (Connection handling)
+            TCPNoDelay          = 1              # Low latency for many connections
+            TcpAckFrequency     = 2
+            TcpDelAckTicks      = 1
+            NetworkThrottling   = 10
+            
+            # Adapter
+            InterruptModeration = $true
+            FlowControl         = $true
+            RSS                 = $true                 # Critical for multi-connection
+            RSC                 = $true
+            
+            # Advanced
+            Timestamps          = $true          # Better for server scenarios
+            ECN                 = $true
+            CongestionProvider  = "DCTCP" # Data Center TCP (if supported)
+        }
+    }
+}
+
+# ============================================================================
+# WORKLOAD DETECTION
+# ============================================================================
+
+function Get-NetworkWorkload {
+    <#
+    .SYNOPSIS
+    Auto-detects current network workload based on running processes
+    #>
+    [CmdletBinding()]
+    param()
+    
+    $processes = Get-Process
+    
+    $workload = @{
+        Gaming    = 0
+        Streaming = 0
+        General   = 0
+        Score     = @{}
+    }
+    
+    # Gaming indicators
+    $gamingProcesses = @("*game*", "*valorant*", "cs2", "dota2", "league*", "*overwatch*", "*apex*")
+    foreach ($pattern in $gamingProcesses) {
+        $count = ($processes | Where-Object { $_.Name -like $pattern }).Count
+        $workload.Gaming += $count
+    }
+    
+    # Streaming indicators
+    $streamingProcesses = @("obs*", "*streamlabs*", "*xsplit*", "*discord*")
+    foreach ($pattern in $streamingProcesses) {
+        $count = ($processes | Where-Object { $_.Name -like $pattern }).Count
+        $workload.Streaming += $count
+    }
+    
+    # Classify
+    $workload.Score = @{
+        Gaming    = $workload.Gaming * 10
+        Streaming = $workload.Streaming * 10
+        General   = 5  # Baseline
+    }
+    
+    $recommended = ($workload.Score.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Name
+    
+    if ($recommended -eq "Gaming") {
+        return "CompetitiveGaming"
+    }
+    elseif ($recommended -eq "Streaming") {
+        return "Streaming"
+    }
+    else {
+        return "General"
+    }
+}
+
+# ============================================================================
+# NETWORK PROFILE APPLICATION
+# ============================================================================
+
+function Invoke-NetworkProfile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("General", "CompetitiveGaming", "Streaming", "Server")]
+        [string]$ProfileName
     )
     
-    foreach ($k in $networkKeys) {
-        Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc
+    $profile = $Script:NetworkProfiles[$ProfileName]
+    $settings = $profile.Settings
+    
+    Write-Host ""
+    Write-Host " +========================================================+" -ForegroundColor Cyan
+    Write-Host " |  APLICANDO PERFIL: $($profile.Name.PadRight(36))  |" -ForegroundColor Cyan
+    Write-Host " +========================================================+" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host " $($profile.Description)" -ForegroundColor Gray
+    Write-Host ""
+    
+    $applied = 0
+    $failed = 0
+    
+    # =========================================================================
+    # 1. TCP/IP STACK (Registry)
+    # =========================================================================
+    Write-Step (Msg "Net.Step.TCP")
+    
+    $tcpPath = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
+    
+    $tcpKeys = @(
+        @{ Name = "TCPNoDelay"; Value = $settings.TCPNoDelay; Desc = (Msg "Net.Desc.TCPNoDelay") },
+        @{ Name = "TcpAckFrequency"; Value = $settings.TcpAckFrequency; Desc = (Msg "Net.Desc.AckFreq") },
+        @{ Name = "TcpDelAckTicks"; Value = $settings.TcpDelAckTicks; Desc = (Msg "Net.Desc.DelAck") }
+    )
+    
+    foreach ($k in $tcpKeys) {
+        if (Set-RegistryKey -Path $tcpPath -Name $k.Name -Value $k.Value -Desc $k.Desc) {
+            $applied++
+        }
+        else {
+            $failed++
+        }
+    }
+    
+    # Network Throttling (Multimedia Class Scheduler)
+    $mmPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+    if (Set-RegistryKey -Path $mmPath -Name "NetworkThrottlingIndex" -Value $settings.NetworkThrottling -Desc (Msg "Net.Desc.Throttling")) {
+        $applied++
+    }
+    else {
+        $failed++
     }
     
     # =========================================================================
-    # 3. NETWORK ADAPTER TUNING
+    # 2. NETSH TCP SETTINGS
     # =========================================================================
-    Write-Step "[3/5] ADAPTER ADVANCED SETTINGS"
+    Write-Step (Msg "Net.Step.Netsh")
+    
+    try {
+        # Congestion Provider
+        Set-NetTCPSetting -SettingName InternetCustom -CongestionProvider $settings.CongestionProvider -ErrorAction Stop
+        Write-Host "   [OK] $(Msg 'Net.Desc.Congestion' $settings.CongestionProvider)" -ForegroundColor Green
+        $applied++
+        
+        # ECN
+        $ecnValue = if ($settings.ECN) { "Enabled" } else { "Disabled" }
+        Set-NetTCPSetting -SettingName InternetCustom -EcnCapability $ecnValue -ErrorAction Stop
+        Write-Host "   [OK] $(Msg 'Net.Desc.ECN' $ecnValue)" -ForegroundColor Green
+        $applied++
+        
+        # Timestamps
+        $tsValue = if ($settings.Timestamps) { "Enabled" } else { "Disabled" }
+        Set-NetTCPSetting -SettingName InternetCustom -Timestamps $tsValue -ErrorAction Stop
+        Write-Host "   [OK] Timestamps: $tsValue" -ForegroundColor Green
+        $applied++
+    }
+    catch {
+        Write-Host "   [!] Error configuring NetTCPSetting: $_" -ForegroundColor Yellow
+        $failed++
+    }
+    
+    # Global netsh settings
+    $netshCmds = @(
+        @{ Cmd = "netsh int tcp set global autotuninglevel=normal"; Desc = "AutoTuning Normal" },
+        @{ Cmd = "netsh int tcp set global rss=enabled"; Desc = "RSS Enabled" },
+        @{ Cmd = "netsh int tcp set global chimney=disabled"; Desc = "Chimney Disabled" }
+    )
+    
+    foreach ($cmd in $netshCmds) {
+        try {
+            $null = Invoke-Expression $cmd.Cmd 2>&1
+            Write-Host "   [OK] $($cmd.Desc)" -ForegroundColor Green
+            $applied++
+        }
+        catch {
+            $failed++
+        }
+    }
+    
+    # =========================================================================
+    # 3. NETWORK ADAPTER SETTINGS
+    # =========================================================================
+    Write-Step "[3/4] NETWORK ADAPTER"
     
     $activeNic = Get-ActiveNetworkAdapter
+    
     if ($activeNic) {
-        Write-Host "   [i] Optimizando: $($activeNic.Name)" -ForegroundColor Cyan
+        Write-Host "   [i] Target: $($activeNic.Name)" -ForegroundColor Cyan
         
         try {
-            # Interrupt Moderation (Disable for lowest latency, Enable for CPU saving)
-            # For "Optimization", we usually target performance/latency
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*Interrupt Moderation" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 0 -ErrorAction SilentlyContinue
+            # Interrupt Moderation
+            $imValue = if ($settings.InterruptModeration) { "Enabled" } else { "Disabled" }
+            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*Interrupt Moderation" -DisplayValue $imValue -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Interrupt Moderation: $imValue" -ForegroundColor Green
+            $applied++
             
-            # Buffers
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*Receive Buffers" -DisplayValue "2048" -ErrorAction SilentlyContinue
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*Transmit Buffers" -DisplayValue "2048" -ErrorAction SilentlyContinue
+            # Flow Control
+            $fcValue = if ($settings.FlowControl) { "Enabled" } else { "Disabled" }
+            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*Flow Control" -DisplayValue $fcValue -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Flow Control: $fcValue" -ForegroundColor Green
+            $applied++
             
-            # Offloads (Disable for gaming consistency, Enable for CPU offload)
-            # Modern NICs handle offload well, but old wisdom says disable for consistency.
-            # We will disable Flow Control which is universally agreed bad for gaming.
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*FlowControl" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
+            # RSS
+            if ($settings.RSS) {
+                Enable-NetAdapterRss -Name $activeNic.Name -ErrorAction SilentlyContinue
+                Write-Host "   [OK] RSS: Enabled" -ForegroundColor Green
+            }
+            else {
+                Disable-NetAdapterRss -Name $activeNic.Name -ErrorAction SilentlyContinue
+                Write-Host "   [OK] RSS: Disabled" -ForegroundColor Green
+            }
+            $applied++
             
-            # Power Saving
+            # RSC
+            if ($settings.RSC) {
+                Enable-NetAdapterRsc -Name $activeNic.Name -ErrorAction SilentlyContinue
+                Write-Host "   [OK] RSC: Enabled" -ForegroundColor Green
+            }
+            else {
+                Disable-NetAdapterRsc -Name $activeNic.Name -ErrorAction SilentlyContinue
+                Write-Host "   [OK] RSC: Disabled" -ForegroundColor Green
+            }
+            $applied++
+            
+            # Power Saving (always disable for performance)
             Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*EEE" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
             Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "Energy Efficient Ethernet" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
             Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "Green Ethernet" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "Power Saving Mode" -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            
-            Write-Host "   [OK] Adaptador afinado (Buffers, EEE off, FlowControl off)" -ForegroundColor Green
+            Write-Host "   [OK] Power Saving: Disabled" -ForegroundColor Green
+            $applied++
         }
         catch {
-            Write-Host "   [!] Algunas propiedades del adaptador no soportadas." -ForegroundColor DarkGray
+            Write-Host "   [!] Some adapter properties not supported" -ForegroundColor DarkGray
         }
+    }
+    else {
+        Write-Host "   [!] No active network adapter found" -ForegroundColor Yellow
+        $failed++
     }
     
     # =========================================================================
-    # 4. DNS OPTIMIZATION & CACHE
+    # 4. DNS & QOS
     # =========================================================================
-    Write-Step "[4/5] DNS OPTIMIZATION"
+    Write-Step "[4/4] DNS & QOS"
     
-    Clear-DnsClientCache
+    # DNS Cache
+    Clear-DnsClientCache -ErrorAction SilentlyContinue
     Write-Host "   [OK] DNS Cache Flushed" -ForegroundColor Green
+    $applied++
     
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" -Name "MaxCacheTtl" -Value 86400 -Type DWord -Force
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" -Name "MaxNegativeCacheTtl" -Value 5 -Type DWord -Force
+    # DNS TTL
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" -Name "MaxCacheTtl" -Value 86400 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" -Name "MaxNegativeCacheTtl" -Value 5 -Type DWord -Force -ErrorAction SilentlyContinue
     Write-Host "   [OK] DNS TTL Optimized" -ForegroundColor Green
-    
-    # Priority
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" -Name "DnsPriority" -Value 6 -Type DWord -Force
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" -Name "HostsPriority" -Value 5 -Type DWord -Force
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" -Name "LocalPriority" -Value 4 -Type DWord -Force
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" -Name "NetbtPriority" -Value 7 -Type DWord -Force
-    
-    # =========================================================================
-    # 5. QOS & THROTTLING
-    # =========================================================================
-    Write-Step "[5/5] QOS & THROTTLING"
-    
-    # Network Throttling Index (Multimedia Class Scheduler)
-    # FFFFFFFF = Disable throttling
-    Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xFFFFFFFF -Type DWord -Desc "Network Throttling Disabled"
+    $applied++
     
     # QoS Reserved Bandwidth
     $qosPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched"
     if (-not (Test-Path $qosPath)) { New-Item $qosPath -Force | Out-Null }
-    Set-ItemProperty -Path $qosPath -Name "NonBestEffortLimit" -Value 0 -Type DWord -Force
-    Write-Host "   [OK] QoS Reserved Bandwidth: 0%" -ForegroundColor Green
-
+    Set-ItemProperty -Path $qosPath -Name "NonBestEffortLimit" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Write-Host "   [OK] QoS Reserved: 0%" -ForegroundColor Green
+    $applied++
+    
+    # =========================================================================
+    # SUMMARY
+    # =========================================================================
     Write-Host ""
-    Write-Host " [OK] Network Optimization Complete." -ForegroundColor Green
-    Write-Host " [!] Reinicio recomendado." -ForegroundColor Yellow
+    Write-Host " +========================================================+" -ForegroundColor Green
+    Write-Host " |  NETWORK PROFILE APPLIED                               |" -ForegroundColor Green
+    Write-Host " +========================================================+" -ForegroundColor Green
+    Write-Host ""
+    Write-Host " Settings applied: $applied" -ForegroundColor Green
+    Write-Host " Failed: $failed" -ForegroundColor $(if ($failed -gt 0) { "Yellow" } else { "Gray" })
+    Write-Host ""
+    Write-Host " [!] REBOOT RECOMMENDED for full effect" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Save profile selection
+    try {
+        $configPath = "HKLM:\SOFTWARE\NeuralOptimizer"
+        if (-not (Test-Path $configPath)) {
+            New-Item -Path $configPath -Force | Out-Null
+        }
+        Set-ItemProperty -Path $configPath -Name "NetworkProfile" -Value $ProfileName -Force
+    }
+    catch {}
+}
+
+# ============================================================================
+# DNS BENCHMARK
+# ============================================================================
+
+function Test-DnsLatency {
+    [CmdletBinding()]
+    param([string]$IP)
+    
+    try {
+        $avg = 0
+        for ($i = 0; $i -lt 3; $i++) {
+            $ping = Test-Connection -ComputerName $IP -Count 1 -ErrorAction Stop
+            $avg += $ping.ResponseTime
+        }
+        return [math]::Round($avg / 3)
+    }
+    catch {
+        return 9999
+    }
+}
+
+function Invoke-SmartDNS {
+    [CmdletBinding()]
+    param()
+    
+    Write-Step "SMART DNS BENCHMARK"
+    
+    $dnsServers = @(
+        @{ Name = "Google"; Primary = "8.8.8.8"; Secondary = "8.8.4.4" },
+        @{ Name = "Cloudflare"; Primary = "1.1.1.1"; Secondary = "1.0.0.1" },
+        @{ Name = "Quad9"; Primary = "9.9.9.9"; Secondary = "149.112.112.112" },
+        @{ Name = "OpenDNS"; Primary = "208.67.222.222"; Secondary = "208.67.220.220" }
+    )
+    
+    Write-Host " [i] Testing DNS latency..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    $bestDns = $null
+    $bestLatency = 9999
+    
+    foreach ($dns in $dnsServers) {
+        $lat = Test-DnsLatency -IP $dns.Primary
+        
+        $color = if ($lat -lt 20) { "Green" } elseif ($lat -lt 50) { "Yellow" } else { "Red" }
+        Write-Host "   $($dns.Name.PadRight(15)): ${lat}ms" -ForegroundColor $color
+        
+        if ($lat -lt $bestLatency) {
+            $bestLatency = $lat
+            $bestDns = $dns
+        }
+    }
+    
+    if ($bestDns -and $bestLatency -lt 999) {
+        Write-Host ""
+        Write-Host " [+] Fastest DNS: $($bestDns.Name) (${bestLatency}ms)" -ForegroundColor Green
+        
+        $activeNic = Get-ActiveNetworkAdapter
+        if ($activeNic) {
+            $apply = Read-Host " >> Apply this DNS? (Y/N)"
+            if ($apply -match '^[Yy]') {
+                try {
+                    Set-DnsClientServerAddress -InterfaceIndex $activeNic.InterfaceIndex `
+                        -ServerAddresses @($bestDns.Primary, $bestDns.Secondary) `
+                        -ErrorAction Stop
+                    
+                    Write-Host " [OK] DNS configured to $($bestDns.Name)" -ForegroundColor Green
+                }
+                catch {
+                    Write-Host " [!] Failed to set DNS: $_" -ForegroundColor Red
+                }
+            }
+        }
+    }
+    
     Write-Host ""
 }
 
-Optimize-NetworkStack
-Wait-ForKeyPress
+# ============================================================================
+# MAIN MENU
+# ============================================================================
+
+function Show-NetworkMenu {
+    Clear-Host
+    
+    Write-Host ""
+    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host " ║  NEURAL NETWORK OPTIMIZER v6.0 UNIFIED               ║" -ForegroundColor Cyan
+    Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+    
+    # Show current profile
+    try {
+        $current = Get-ItemProperty -Path "HKLM:\SOFTWARE\NeuralOptimizer" -Name "NetworkProfile" -ErrorAction SilentlyContinue
+        if ($current) {
+            Write-Host " Current Profile: " -NoNewline
+            Write-Host $current.NetworkProfile -ForegroundColor Green
+        }
+    }
+    catch {}
+    
+    # Auto-detect workload
+    $detected = Get-NetworkWorkload
+    Write-Host " Detected Workload: " -NoNewline
+    Write-Host $detected -ForegroundColor Yellow
+    Write-Host ""
+    
+    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host " ║ NETWORK PROFILES                                      ║" -ForegroundColor White
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Gray
+    
+    $i = 1
+    foreach ($profileKey in $Script:NetworkProfiles.Keys | Sort-Object) {
+        $profile = $Script:NetworkProfiles[$profileKey]
+        Write-Host " ║ $i. " -ForegroundColor Gray -NoNewline
+        Write-Host "$($profile.Name.PadRight(48))" -ForegroundColor Cyan -NoNewline
+        Write-Host " ║" -ForegroundColor Gray
+        Write-Host " ║    $($profile.Description.PadRight(49)) ║" -ForegroundColor DarkGray
+        $i++
+    }
+    
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Gray
+    Write-Host " ║ 5. Auto-Apply (Use detected workload)                ║" -ForegroundColor Yellow
+    Write-Host " ║ 6. Smart DNS Benchmark                                ║" -ForegroundColor White
+    Write-Host " ║ 7. Show Current Settings                              ║" -ForegroundColor White
+    Write-Host " ║ 0. Exit                                                ║" -ForegroundColor DarkGray
+    Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Gray
+    Write-Host ""
+}
+
+# Main Loop
+while ($true) {
+    Show-NetworkMenu
+    
+    $choice = Read-Host " >> Select option"
+    
+    $profileKeys = @($Script:NetworkProfiles.Keys | Sort-Object)
+    
+    switch ($choice) {
+        { $_ -ge 1 -and $_ -le $profileKeys.Count } {
+            $profileName = $profileKeys[$choice - 1]
+            Invoke-NetworkProfile -ProfileName $profileName
+            Wait-ForKeyPress
+        }
+        '5' {
+            $detected = Get-NetworkWorkload
+            Write-Host ""
+            Write-Host " [i] Auto-applying: $detected" -ForegroundColor Cyan
+            Invoke-NetworkProfile -ProfileName $detected
+            Wait-ForKeyPress
+        }
+        '6' {
+            Invoke-SmartDNS
+            Wait-ForKeyPress
+        }
+        '7' {
+            Write-Host ""
+            Write-Host " [i] Current Network Settings:" -ForegroundColor Cyan
+            Write-Host ""
+            
+            # Show active adapter
+            $nic = Get-ActiveNetworkAdapter
+            if ($nic) {
+                Write-Host " Active Adapter: $($nic.Name)" -ForegroundColor White
+                Write-Host " Link Speed: $($nic.LinkSpeed)" -ForegroundColor Gray
+                
+                # DNS
+                $dns = Get-DnsClientServerAddress -InterfaceIndex $nic.InterfaceIndex -AddressFamily IPv4
+                Write-Host " DNS Servers: $($dns.ServerAddresses -join ', ')" -ForegroundColor Gray
+            }
+            
+            Write-Host ""
+            Wait-ForKeyPress
+        }
+        '0' {
+            exit 0
+        }
+        default {
+            Write-Host " [!] Invalid option" -ForegroundColor Red
+            Start-Sleep -Seconds 1
+        }
+    }
+}

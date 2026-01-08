@@ -72,8 +72,8 @@ function Start-SystemMonitor {
     try {
         while ($loop) {
             # Collect Metrics
-            $os = Get-WmiObject Win32_OperatingSystem
-            $cpuPercent = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+            $os = Get-CimInstance Win32_OperatingSystem
+            $cpuPercent = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
             
             $totalRam = [math]::Round($os.TotalVisibleMemorySize / 1KB, 1)
             $freeRam = [math]::Round($os.FreePhysicalMemory / 1KB, 1)

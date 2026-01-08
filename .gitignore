@@ -1,0 +1,16 @@
+# Logs
+*.log
+Neural_History.log
+Neural_Detailed.log
+
+# Backups
+Backups/
+*.bak
+*.reg
+
+# Config
+NeuralConfig.json
+
+# Temporary
+*_old.ps1
+*_backup.ps1

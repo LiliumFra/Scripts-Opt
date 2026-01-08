@@ -34,7 +34,7 @@ function Get-SystemProfile {
     [CmdletBinding()]
     param()
     
-    Write-Host " [+] Analizando sistema..." -ForegroundColor Cyan
+    Write-Host " [+] $(Msg 'AI.Analying')" -ForegroundColor Cyan
     Write-Host ""
     
     $SysProfile = @{
@@ -47,23 +47,23 @@ function Get-SystemProfile {
     }
     
     # Hardware
-    Write-Progress -Activity "System Profiling" -Status "Hardware..." -PercentComplete 10
+    Write-Progress -Activity "System Profiling" -Status (Msg "AI.Progress.Hw") -PercentComplete 10
     $SysProfile.Hardware = Get-HardwareProfile
     
     # Performance metrics
-    Write-Progress -Activity "System Profiling" -Status "Performance..." -PercentComplete 30
+    Write-Progress -Activity "System Profiling" -Status (Msg "AI.Progress.Perf") -PercentComplete 30
     $SysProfile.Performance = Get-PerformanceMetrics
     
     # Usage patterns
-    Write-Progress -Activity "System Profiling" -Status "Usage Patterns..." -PercentComplete 50
+    Write-Progress -Activity "System Profiling" -Status (Msg "AI.Progress.Usage") -PercentComplete 50
     $SysProfile.Usage = Get-UsagePatterns
     
     # Health check
-    Write-Progress -Activity "System Profiling" -Status "Health Check..." -PercentComplete 70
+    Write-Progress -Activity "System Profiling" -Status (Msg "AI.Progress.Health") -PercentComplete 70
     $SysProfile.Health = Get-QuickHealthCheck
     
     # Classify workload
-    Write-Progress -Activity "System Profiling" -Status "Analyzing..." -PercentComplete 90
+    Write-Progress -Activity "System Profiling" -Status (Msg "AI.Analying") -PercentComplete 90
     $SysProfile.Workload = Get-WorkloadClassification -Profile $SysProfile
     $SysProfile.Score = Get-SystemScore -Profile $SysProfile
     
