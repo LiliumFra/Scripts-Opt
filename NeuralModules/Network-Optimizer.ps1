@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Neural Network Optimizer v6.0 UNIFIED
     Consolidación de TODAS las optimizaciones de red del sistema.
@@ -572,3 +572,4 @@ while ($true) {
         }
     }
 }
+

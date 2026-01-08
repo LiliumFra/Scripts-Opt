@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Benchmark Suite v4.0
     Sistema de pruebas de rendimiento antes/después de optimizaciones.
@@ -378,3 +378,4 @@ switch ($choice) {
 }
 
 Wait-ForKeyPress
+

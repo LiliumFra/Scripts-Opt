@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Advanced Registry Optimization v6.0
     Deep system tweaks for input lag, latency, and gaming scheduling.
@@ -93,3 +93,4 @@ function Optimize-GamingRegistry {
 }
 
 Optimize-GamingRegistry
+

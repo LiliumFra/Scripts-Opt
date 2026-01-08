@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     NeuralLocalization Module v1.0
     Handles multi-language support (ES/EN) for Windows Neural Optimizer.
@@ -193,3 +193,4 @@ function Initialize-Localization {
 Initialize-Localization
 
 Export-ModuleMember -Function Get-SystemLanguage, Set-Language, Msg
+

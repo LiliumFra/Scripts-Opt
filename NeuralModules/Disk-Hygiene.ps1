@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Disk, Cache & Network Module v3.5 - ULTIMATE
     Limpieza avanzada + optimizaciones de disco, cache y red.
@@ -370,3 +370,4 @@ function Optimize-Disk {
 }
 
 if ($Silent) { Optimize-Disk -Silent } else { Optimize-Disk }
+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Neural Service Manager v5.0
     Gestion inteligente de servicios de Windows.
@@ -100,3 +100,4 @@ function Invoke-ServiceOptimization {
 
 Invoke-ServiceOptimization
 Wait-ForKeyPress
+

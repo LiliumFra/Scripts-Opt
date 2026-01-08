@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Thermal & Fan Optimization Module v3.5
     Optimiza la política de refrigeración y ventiladores.
@@ -118,3 +118,4 @@ function Optimize-Thermal {
 }
 
 Optimize-Thermal
+

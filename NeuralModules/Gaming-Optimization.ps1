@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Gaming & Performance Module v3.5 - ULTIMATE
     Optimizaciones para NVIDIA, AMD, Intel, y rendimiento general.
@@ -513,3 +513,4 @@ function Optimize-Gaming {
 }
 
 Optimize-Gaming
+

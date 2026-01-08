@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     AI-Powered Recommendation Engine v6.0
     Analiza el sistema y recomienda optimizaciones personalizadas.
@@ -951,3 +951,4 @@ RECOMMENDATIONS ($($recommendations.Count)):
 catch {}
 
 Wait-ForKeyPress
+

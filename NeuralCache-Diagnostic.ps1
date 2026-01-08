@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Neural Cache Diagnostic v5.0
     Analiza y limpia cahés del sistema inteligentes y temporales.
@@ -138,3 +138,4 @@ function Invoke-NeuralCacheClean {
 
 Invoke-NeuralCacheScan
 Wait-ForKeyPress
+

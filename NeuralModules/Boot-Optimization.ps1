@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Boot Optimization Module v3.5 - ULTIMATE
     Optimizaciones avanzadas de arranque, BCD, NTFS, memoria y más.
@@ -302,3 +302,4 @@ function Optimize-Boot {
 }
 
 Optimize-Boot
+

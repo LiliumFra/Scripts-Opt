@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     System Health Check v4.0
     Valida el estado del sistema y detecta problemas.
@@ -408,3 +408,4 @@ Write-Progress -Activity "Health Check" -Completed
 
 Show-HealthReport
 Wait-ForKeyPress
+

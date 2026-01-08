@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     System Update Module v6.0
     Automatically updates the Neural Optimizer using Git.
@@ -73,3 +73,4 @@ function Update-NeuralSystem {
 }
 
 Update-NeuralSystem
+

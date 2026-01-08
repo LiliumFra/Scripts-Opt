@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Real-Time System Monitor v4.0
     Monitor de recursos en consola con estilo HUD.
@@ -127,3 +127,4 @@ function Start-SystemMonitor {
 }
 
 Start-SystemMonitor
+

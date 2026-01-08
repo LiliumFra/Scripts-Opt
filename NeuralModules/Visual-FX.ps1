@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Neural Visual FX Manager v5.0
     Optimizacion de efectos visuales para maximo rendimiento.
@@ -65,3 +65,4 @@ function Invoke-VisualOptimization {
 
 Invoke-VisualOptimization
 Wait-ForKeyPress
+

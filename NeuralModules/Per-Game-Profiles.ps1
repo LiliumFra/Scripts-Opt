@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Per-Game Profiles v6.0
     Configuraciones específicas por juego con auto-detección.
@@ -645,3 +645,4 @@ while ($true) {
         }
     }
 }
+

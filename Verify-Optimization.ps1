@@ -1,4 +1,4 @@
-# Verification Script for Windows Neural Optimizer v6.0
+﻿# Verification Script for Windows Neural Optimizer v6.0
 $ErrorActionPreference = "Stop"
 
 function Test-ModuleImport {
@@ -117,3 +117,4 @@ catch {
 
 Write-Host ""
 Write-Host "=== VERIFICATION COMPLETE ===" -ForegroundColor Cyan
+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Profile System v5.0
     Sistema de perfiles de configuración predefinidos.
@@ -551,3 +551,4 @@ while ($true) {
         }
     }
 }
+

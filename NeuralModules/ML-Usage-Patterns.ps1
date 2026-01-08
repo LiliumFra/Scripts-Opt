@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Machine Learning Usage Patterns v6.0
     Aprende comportamiento del usuario y predice optimizaciones óptimas.
@@ -791,3 +791,4 @@ while ($true) {
         }
     }
 }
+

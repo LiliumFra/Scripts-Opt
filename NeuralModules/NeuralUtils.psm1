@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     NeuralUtils Module v5.1 GLOBAL
     Core shared functions for Windows Neural Optimizer.
@@ -630,3 +630,4 @@ function Set-NeuralConfig {
 }
 
 Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig
+

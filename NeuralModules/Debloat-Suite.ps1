@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Debloat & Privacy Suite v3.5 - ULTIMATE
     Elimina bloatware, telemetría, y optimiza privacidad.
@@ -238,3 +238,4 @@ function Optimize-Debloat {
 }
 
 Optimize-Debloat
+

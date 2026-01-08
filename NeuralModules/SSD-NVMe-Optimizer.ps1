@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     SSD/NVMe Advanced Optimizer v5.0
     Optimizaciones específicas para unidades de estado sólido.
@@ -326,3 +326,4 @@ function Start-SSDOptimization {
 
 Start-SSDOptimization
 Wait-ForKeyPress
+

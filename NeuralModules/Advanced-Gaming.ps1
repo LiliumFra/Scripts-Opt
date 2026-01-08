@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Advanced Gaming Optimization v5.0 ULTRA
     Optimizaciones extremas para gaming competitivo y streaming.
@@ -382,3 +382,4 @@ function Start-AdvancedGamingOptimization {
 
 Start-AdvancedGamingOptimization
 Wait-ForKeyPress
+

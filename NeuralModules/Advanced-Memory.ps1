@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Advanced Memory Optimization v5.0
     Optimización profunda de RAM, paging, y memory pools.
@@ -469,3 +469,4 @@ function Start-AdvancedMemoryOptimization {
 
 Start-AdvancedMemoryOptimization
 Wait-ForKeyPress
+

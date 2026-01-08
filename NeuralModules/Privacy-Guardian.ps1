@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Neural Privacy Guardian v5.0
     Proteccion de privacidad y bloqueo de telemetria.
@@ -58,3 +58,4 @@ function Invoke-PrivacyHardening {
 
 Invoke-PrivacyHardening
 Wait-ForKeyPress
+
