@@ -189,7 +189,6 @@ function Test-NetworkPerformance {
 function Get-BootTime {
     try {
         $os = Get-CimInstance Win32_OperatingSystem
-        $bootTime = $os.LastBootUpTime
         # Uptime check removed as unused
         
         # Estimate boot time (desde apagado hasta escritorio)

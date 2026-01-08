@@ -33,7 +33,7 @@ foreach ($s in $scripts) {
     if (Test-Path $path) {
         $errors = $null
         try {
-            $tokens = [System.Management.Automation.PSParser]::Tokenize((Get-Content $path -Raw -Encoding UTF8), [ref]$errors)
+            $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $path -Raw -Encoding UTF8), [ref]$errors)
             if ($errors) {
                 Write-Host " [FAIL] $s" -ForegroundColor Red
                 foreach ($err in $errors) {

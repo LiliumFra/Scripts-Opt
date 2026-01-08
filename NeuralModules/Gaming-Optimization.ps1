@@ -1,10 +1,10 @@
 ﻿<#
 .SYNOPSIS
-    Gaming & Performance Module v3.5 - ULTIMATE
+    Gaming & Performance Module v6.0 - ULTIMATE
     Optimizaciones para NVIDIA, AMD, Intel, y rendimiento general.
 
 .NOTES
-    Parte de Windows Neural Optimizer v3.5
+    Parte de Windows Neural Optimizer v6.0
     Creditos: Jose Bustamante
 #>
 
@@ -507,7 +507,7 @@ function Optimize-Gaming {
     # Resumen
     Write-Host ""
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green
-    Write-Host " |  GAMING OPTIMIZATION v3.5 COMPLETADO                   |" -ForegroundColor Green
+    Write-Host " |  GAMING OPTIMIZATION v6.0 COMPLETADO                   |" -ForegroundColor Green
     Write-Host " |  Tweaks aplicados: $appliedTweaks                                    |" -ForegroundColor Green
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green
 }

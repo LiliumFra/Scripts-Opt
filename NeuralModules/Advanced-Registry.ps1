@@ -51,7 +51,7 @@ function Optimize-GamingRegistry {
     Checkpoint-Computer -Description "NeuralOptimizer_RegistryTweaks_$(Get-Date -Format 'yyyyMMdd')" -RestorePointType MODIFY_SETTINGS -ErrorAction SilentlyContinue
     
     Write-Host ""
-    Write-Host " [1] GPU & GRAPHICS" -ForegroundColor Yellow
+    Write-Step "[1] GPU & GRAPHICS"
     
     # HAGS (Requires Reboot)
     Set-RegistryTweak -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -Value 2 -Description "Enable Hardware-Accelerated GPU Scheduling"
@@ -61,7 +61,7 @@ function Optimize-GamingRegistry {
     Set-RegistryTweak -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Value 0 -Description "Enforce FSE Disable Preference"
     
     Write-Host ""
-    Write-Host " [2] PROCESS & SCHEDULING" -ForegroundColor Yellow
+    Write-Step "[2] PROCESS & SCHEDULING"
     
     # Network Throttling (FFFFFFFF = Disabled)
     Set-RegistryTweak -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xFFFFFFFF -Description "Disable Network Throttling"
@@ -76,7 +76,7 @@ function Optimize-GamingRegistry {
     Set-RegistryTweak -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -Value 38 -Description "Optimize Foreground Priority (26 Hex)"
     
     Write-Host ""
-    Write-Host " [3] GAMING TASK PRIORITY" -ForegroundColor Yellow
+    Write-Step "[3] GAMING TASK PRIORITY"
     
     $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
     Set-RegistryTweak -Path $gamesPath -Name "GPU Priority" -Value 8 -Description "Set GPU Priority High"
@@ -89,7 +89,7 @@ function Optimize-GamingRegistry {
     Write-Host " [i] A restore point was created if you need to rollback." -ForegroundColor Gray
     
     Write-Host ""
-    Wait-ForKeyPress
+    # Wait-ForKeyPress removed (Handled by Main Menu)
 }
 
 Optimize-GamingRegistry
