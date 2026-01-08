@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    NeuralUtils Module v3.5
+    NeuralUtils Module v5.0 ULTRA
     Core shared functions for Windows Neural Optimizer.
 
 .DESCRIPTION
@@ -10,9 +10,13 @@
     - UI Helpers (Wait-ForKeyPress, Write-Section)
     - Registry Helpers (Set-RegistryKey)
     - File Ops (Remove-FolderSafe)
+    - Performance Timing (Start/Stop-PerformanceTimer)
+    - Reporting (Get-PerformanceReport)
+    - Rollback (Invoke-Rollback)
+    - Hardware Info (Show-HardwareInfo)
 
 .NOTES
-    Part of Windows Neural Optimizer v3.5
+    Part of Windows Neural Optimizer v5.0 ULTRA
     Creditos: Jose Bustamante
 #>
 
@@ -92,11 +96,6 @@ function Invoke-AdminCheck {
     }
 
     try {
-        # Script path logic removed (unused)
-        # Relaunch logic is handled by caller usually or simple restart here
-        # But usually better to let the script handle the restart arguments (like -SkipRestore)
-        # For modules, we just exit if not admin.
-        
         Write-Host " [X] ERROR: Reinicie como Administrador." -ForegroundColor Red
         Wait-ForKeyPress
         exit 1
@@ -162,7 +161,6 @@ function Set-RegistryKey {
     catch {
         if ($Desc) {
             Write-Host "   [!!] $Desc" -ForegroundColor Yellow
-            # Write-Host "        $($_.Exception.Message)" -ForegroundColor DarkGray
         }
         return $false
     }
@@ -196,10 +194,8 @@ function Remove-FolderSafe {
 
     try {
         if (Test-Path $Path) {
-            # Try fast removal first
             Remove-Item -Path $Path -Recurse -Force -ErrorAction SilentlyContinue 
             
-            # If still exists (partial), try child items
             if (Test-Path $Path) {
                 Get-ChildItem -Path $Path -Recurse -Force -ErrorAction SilentlyContinue | 
                 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
@@ -229,9 +225,15 @@ function Remove-FolderSafe {
 
 function Get-HardwareProfile {
     $hw = [PSCustomObject]@{
-        IsSSD     = $false
-        RamGB     = 0
-        CpuVendor = "Unknown"
+        IsSSD       = $false
+        RamGB       = 0
+        CpuVendor   = "Unknown"
+        CpuCores    = 0
+        CpuThreads  = 0
+        CpuMaxSpeed = 0
+        GpuVendor   = "Unknown"
+        GpuName     = "Unknown"
+        RamSpeed    = 0
     }
 
     # RAM
@@ -239,6 +241,10 @@ function Get-HardwareProfile {
         $comp = Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue
         if ($comp) {
             $hw.RamGB = [math]::Round($comp.TotalPhysicalMemory / 1GB, 1)
+        }
+        $mem = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($mem) {
+            $hw.RamSpeed = $mem.Speed
         }
     }
     catch {}
@@ -249,29 +255,41 @@ function Get-HardwareProfile {
         if ($cpu) {
             if ($cpu.Name -match "Intel") { $hw.CpuVendor = "Intel" }
             elseif ($cpu.Name -match "AMD|Ryzen") { $hw.CpuVendor = "AMD" }
+            $hw.CpuCores = $cpu.NumberOfCores
+            $hw.CpuThreads = $cpu.NumberOfLogicalProcessors
+            $hw.CpuMaxSpeed = $cpu.MaxClockSpeed
         }
     }
     catch {}
     
-    # SSD (Smart System Drive Detection)
+    # GPU
     try {
-        # Try to find the physical disk hosting the OS (C:)
+        $gpu = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($gpu) {
+            $hw.GpuName = $gpu.Name
+            if ($gpu.Name -match "NVIDIA") { $hw.GpuVendor = "NVIDIA" }
+            elseif ($gpu.Name -match "AMD|Radeon") { $hw.GpuVendor = "AMD" }
+            elseif ($gpu.Name -match "Intel") { $hw.GpuVendor = "Intel" }
+        }
+    }
+    catch {}
+    
+    # SSD
+    try {
         $driveLetter = ($env:SystemDrive -replace ':', '')
         $partition = Get-Partition -DriveLetter $driveLetter -ErrorAction SilentlyContinue
-        
         $targetDisk = $null
-        
         if ($partition) {
             $targetDisk = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq $partition.DiskNumber } | Select-Object -First 1
         }
-        
-        # Fallback to Disk 0 if logic fails
         if (-not $targetDisk) {
             $targetDisk = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq 0 } | Select-Object -First 1
         }
 
         if ($targetDisk -and ($targetDisk.MediaType -match "SSD|Unspecified")) {
             $hw.IsSSD = $true
+            # Simple NVMe check: usually bus type 17 is NVMe
+            if ($targetDisk.BusType -eq 17) { $hw.IsNVMe = $true } else { $hw.IsNVMe = $false }
         }
     }
     catch {}
@@ -281,7 +299,6 @@ function Get-HardwareProfile {
 
 function Get-ActiveNetworkAdapter {
     try {
-        # Get adapter with default gateway (internet access)
         $route = Get-NetRoute -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($route) {
             $ifIndex = $route.InterfaceIndex
@@ -304,16 +321,13 @@ function New-SystemRestorePoint {
     Write-Host " [i] Verificando Sistema de Restauracion..." -ForegroundColor Cyan
     
     try {
-        # Check if System Restore is enabled
         $null = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         
-        # Check privileges again just in case (needs admin)
         if (-not (Test-AdminPrivileges)) {
-            Write-Host " [!] Se requieren permisos de Admin para crear punto de restauracion." -ForegroundColor Yellow
+            Write-Host " [!] Se requieren permisos de Admin." -ForegroundColor Yellow
             return $false
         }
 
-        # Attempt creation
         Write-Host " [+] Creando Punto de Restauracion: '$Description'..." -ForegroundColor Cyan
         Checkpoint-Computer -Description $Description -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop | Out-Null
         
@@ -322,12 +336,118 @@ function New-SystemRestorePoint {
     }
     catch {
         Write-Host " [!] No se pudo crear el Punto de Restauracion." -ForegroundColor Red
-        Write-Host "     Posible causa: La proteccion del sistema esta deshabilitada o frecuencia limitada." -ForegroundColor DarkGray
-        Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor DarkGray
-        
-        # Optional: Ask user if they want to enable it? (Maybe too intrusive for utility, keeping it simple)
         return $false
     }
 }
 
-Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint
+function Invoke-Rollback {
+    Write-Section "SYSTEM RESTORE ROLLBACK"
+    
+    try {
+        $points = Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Sort-Object CreationTime -Descending
+        
+        if (-not $points) {
+            Write-Host " [!] No hay puntos de restauración disponibles." -ForegroundColor Red
+            return
+        }
+        
+        Write-Host " Puntos de restauración recientes:" -ForegroundColor Cyan
+        Write-Host ""
+        
+        $i = 1
+        foreach ($p in $points) {
+            Write-Host " $i. [$($p.CreationTime)] $($p.Description)" -ForegroundColor White
+            $i++
+            if ($i -gt 5) { break }
+        }
+        
+        Write-Host ""
+        $choice = Read-Host " >> Seleccione número para restaurar (0 para cancelar)"
+        
+        if ($choice -match '^\d+$' -and $choice -gt 0 -and $choice -le $points.Count) {
+            $selected = $points[$choice - 1]
+            Write-Host ""
+            Write-Host " [!] ADVERTENCIA: El sistema se reiniciará para restaurar: $($selected.Description)" -ForegroundColor Yellow
+            $confirm = Read-Host " >> ¿Continuar? (S/N)"
+            
+            if ($confirm -match '^[Ss]') {
+                Restore-Computer -RestorePoint $selected -Confirm:$false
+            }
+        }
+    }
+    catch {
+        Write-Host " [!] Error en rollback: $_" -ForegroundColor Red
+    }
+}
+
+# ============================================================================
+# PERFORMANCE & TIMING
+# ============================================================================
+
+$Script:PerformanceTimers = @{}
+
+function Start-PerformanceTimer {
+    param([string]$Name)
+    $Script:PerformanceTimers[$Name] = Get-Date
+}
+
+function Stop-PerformanceTimer {
+    param([string]$Name)
+    if ($Script:PerformanceTimers.ContainsKey($Name)) {
+        $start = $Script:PerformanceTimers[$Name]
+        $elapsed = ((Get-Date) - $start).TotalSeconds
+        $Script:PerformanceTimers.Remove($Name)
+        return $elapsed
+    }
+    return 0
+}
+
+function Get-PerformanceReport {
+    Write-Section "PERFORMANCE REPORT"
+    
+    $historyLog = Join-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) "..\Neural_History.log"
+    
+    if (Test-Path $historyLog) {
+        $lines = Get-Content $historyLog -Tail 20
+        Write-Host " Actividad reciente:" -ForegroundColor Cyan
+        foreach ($line in $lines) {
+            if ($line -match "ERROR") {
+                Write-Host " $line" -ForegroundColor Red
+            }
+            elseif ($line -match "OK|Success") {
+                Write-Host " $line" -ForegroundColor Green
+            }
+            else {
+                Write-Host " $line" -ForegroundColor Gray
+            }
+        }
+    }
+    else {
+        Write-Host " No hay historial disponible." -ForegroundColor Gray
+    }
+    
+    Write-Host ""
+}
+
+function Show-HardwareInfo {
+    $hw = Get-HardwareProfile
+    Write-Section "HARDWARE PROFILE"
+    
+    Write-Host " CPU:     $($hw.CpuVendor) Core ($($hw.CpuCores)C/$($hw.CpuThreads)T)" -ForegroundColor White
+    Write-Host " Speed:   $($hw.CpuMaxSpeed) MHz" -ForegroundColor Gray
+    Write-Host " RAM:     $($hw.RamGB) GB @ $($hw.RamSpeed) MHz" -ForegroundColor White
+    Write-Host " GPU:     $($hw.GpuName) ($($hw.GpuVendor))" -ForegroundColor White
+    Write-Host " Storage: $(if($hw.IsNVMe){"NVMe"}elseif($hw.IsSSD){"SSD"}else{"HDD"})" -ForegroundColor White
+    
+    Write-Host ""
+    
+    $nic = Get-ActiveNetworkAdapter
+    if ($nic) {
+        Write-Host " Network: $($nic.Name)" -ForegroundColor White
+        Write-Host " Speed:   $($nic.LinkSpeed)" -ForegroundColor Gray
+    }
+    
+    Write-Host ""
+}
+
+Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo

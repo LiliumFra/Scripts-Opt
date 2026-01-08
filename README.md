@@ -1,7 +1,7 @@
 # 🚀 Windows Neural Optimizer v3.5
 
 > **Advanced System Optimization & Debloating Suite for Windows 10/11**  
-> *Developed by **Josef** | Powered by Neural Modules*
+> *Developed by **Jose Bustamante** | Powered by Neural Modules*
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=for-the-badge&logo=powershell)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows)
@@ -67,6 +67,6 @@ This software makes changes to the Windows Registry and System Services.
 
 ## 🏆 Credits
 
-- **Concept & Architecture**: Josef
-- **Core Optimization Logic**: Josef
-- **Additional Credits**: Jose Bustamante
+- **Developer**: Jose Bustamante
+- **License**: MIT
+- **Design Philosophy**: "Maximum Performance with Zero Compromise"
