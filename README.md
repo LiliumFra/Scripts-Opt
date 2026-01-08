@@ -1,72 +1,74 @@
-# 🚀 Windows Neural Optimizer v3.5
+# 🚀 Windows Neural Optimizer v6.0 ULTRA
 
-> **Advanced System Optimization & Debloating Suite for Windows 10/11**  
-> *Developed by **Jose Bustamante** | Powered by Neural Modules*
+> **Next-Gen System Optimization Suite for Windows 10/11**  
+> *Developed by **Jose Bustamante** | Powered by Neural Modules & Smart Localization*
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=for-the-badge&logo=powershell)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-6.0_ULTRA-purple?style=for-the-badge)
 
 ## 🌟 Overview
 
-**Windows Neural Optimizer** is a modular, high-performance PowerShell suite designed to reduce system latency, optimize network settings, and improve gaming performance. Unlike generic "debloaters," this tool uses **hardware-aware logic** (NeuralUtils) to adapt tweaks specifically to your CPU, RAM, and SSD.
+**Windows Neural Optimizer v6.0 ULTRA** is a massive leap forward in system optimization. Beyond standard tweaks, it introduces an **AI-driven Recommendation Engine**, **Machine Learning Usage Analysis**, and a **Safety-First Registry System**. It now natively supports **English and Spanish** (auto-detected), making high-performance computing accessible to more users.
 
-## ✨ Key Features
+## ✨ New in v6.0
 
-### 🧠 Deep Hardware Tuning
+### 🛡️ Safety & Reliability
 
-- **Smart RAM Management**: Automatically enables `LargeSystemCache` only on systems with 16GB+ RAM.
-- **CPU Intelligence**: Disables Power Throttling on Intel CPUs and adjusts `Win32PrioritySeparation` for maximum responsiveness.
-- **SSD/HDD Awareness**: Applies filesystem optimizations based on your drive type.
+- **Smart Registry Backups**: Every registry change is automatically backed up to a `.reg` file in `Backups/` before application.
+- **Rollback System**: Integrated menu option to undo changes safely.
+- **System Restore**: Auto-creates restore points before major operations.
 
-### ⚡ Gaming & Network
+### 🌍 Neural Localization
 
-- **Smart DNS Benchmark**: Tests latency to Google, Cloudflare, and OpenDNS to find the fastest server for YOUR connection.
-- **Nagle's Algorithm Disable**: Reduces packet delay (TCP NoDelay) specifically on your active network adapter.
-- **GPU Optimization**: Detects NVIDIA/AMD/Intel GPUs and applies specific registry tweaks.
+- **Bilingual Interface**: Automatically detects your OS language (ES/EN) and adapts the UI, logs, and messages instantly.
+- **Manual Override**: Change language anytime via config or console.
 
-### 🛡️ Safety First
+### 🔥 Ultra Performance Modules
 
-- **Auto-Restore Points**: Automatically creates a System Restore Point before making changes.
-- **Safe Debloat**: Removes bloatware with safety checks to prevent breaking essential features.
+- **Advanced Gaming**: MSI Mode configuration, High Precision Event Timer (HPET) tuning, and competitive network settings.
+- **Memory Intelligence**: Dynamic pagefile management and pool optimization based on usage patterns.
+- **SSD/NVMe Guard**: TRIM optimization and power state management tailored to drive health.
 
-### 💾 NeuralCache (Bonus)
+### 🧠 AI & Machine Learning
 
-- Includes `NeuralCache-Diagnostic.ps1`, a self-optimizing file scanner that caches results for instant access, perfect for managing large game libraries.
+- **AI Recommendations**: Scans your hardware and suggests specific optimizations (e.g., "Disable HAGS for this GPU", "Enable LargeSystemCache for 32GB RAM").
+- **ML Usage Patterns**: Analyzes your typical usage (Gaming vs Work) to auto-tune background services.
 
-## 📦 Modules
+## 📦 Modular Architecture
 
-| Module | Description |
-| :--- | :--- |
-| `Optimize-Windows.ps1` | **Main Controller**. Run this file to start the menu. |
-| `NeuralUtils.psm1` | Shared brain. Handles logging, safety, and hardware detection. |
-| `Boot-Optimization.ps1` | BCD tweaks, NTFS optimization, and startup cleanup. |
-| `Debloat-Suite.ps1` | Removes pre-installed apps and telemetry. |
-| `Disk-Hygiene.ps1` | Deep cleaning of temp files and update caches. |
-| `Gaming-Optimization.ps1` | Latency reduction, GPU tweaks, and DNS benchmarking. |
+| Category | Modules | Description |
+| :--- | :--- | :--- |
+| **Core** | `Optimize-Windows.ps1` | **Main Controller**. Launch this to start. |
+| **Foundation** | `NeuralUtils.psm1`, `NeuralLocalization.psm1` | Shared libraries for safety, logging, and translation. |
+| **Standard** | `Boot`, `Debloat`, `Disk`, `Gaming`, `Thermal` | Essential tweaks for every system. |
+| **Ultra** | `Advanced-Gaming`, `Advanced-Memory`, `SSD-NVMe` | Deep-dive optimizations for enthusiasts. |
+| **Experimental** | `Advanced-Registry`, `Update-System` | Cutting-edge tweaks and git-based auto-updates. |
+| **AI/ML** | `AI-Recommendations`, `ML-Usage-Patterns` | Smart logic to tailor the experience to YOU. |
+| **Tools** | `System-Monitor`, `Benchmark`, `Health-Check` | Real-time diagnostics and verification. |
 
 ## 🚀 How to Use
 
-1. **Download** the repository.
+1. **Download** the repository (Clone or Zip).
 2. Double-click **`Run-Optimizer.bat`**.
-   - *This will automatically ask for Admin permissions and launch the menu.*
-3. Select an option from the menu:
-   - `[1-4]`: Run individual modules.
-   - `[5]`: **Run ALL (Reccomended)**.
-
-### For NeuralCache
-
-- Double-click **`Run-NeuralCache.bat`**.
-- It will automatically detecting your Steam library or ask you to drag a folder.
+   - *Automatically requests Admin privileges and launches the Neural Interface.*
+3. **Select an Option**:
+   - `[1-5]`: Standard individual optimizations.
+   - `[6]`: **Run ALL Standard Modules**.
+   - `[7-9]`: Ultra performance modules (Use with care!).
+   - `[11-13]`: AI and ML analysis.
+   - `[20]`: **Health Check** to verify system integrity.
 
 ## ⚠️ Disclaimer
 
-This software makes changes to the Windows Registry and System Services.  
-**ALWAYS create a backup** (the script tries to do this for you, but extra caution is good).  
-*The authors are not responsible for any instability or data loss.*
+This tool interacts deeply with Windows internals (Registry, Services, Boot Manager).  
+**v6.0 includes robust backup systems**, but **ALWAYS** proceed with caution.  
+*The authors are not responsible for any system instability.*
 
 ## 🏆 Credits
 
-- **Developer**: Jose Bustamante
+- **Lead Developer**: Jose Bustamante
+- **Architecture**: Modular Neural System
 - **License**: MIT
-- **Design Philosophy**: "Maximum Performance with Zero Compromise"
+- **Philosophy**: "Intelligent Performance, Zero Compromise"
