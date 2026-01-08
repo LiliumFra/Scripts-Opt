@@ -105,7 +105,12 @@ function Test-ModulesExist {
         "NeuralModules\Network-Optimizer.ps1",
         "NeuralModules\Service-Manager.ps1",
         "NeuralModules\Privacy-Guardian.ps1",
-        "NeuralModules\Visual-FX.ps1"
+        "NeuralModules\Network-Optimizer.ps1",
+        "NeuralModules\Service-Manager.ps1",
+        "NeuralModules\Privacy-Guardian.ps1",
+        "NeuralModules\Visual-FX.ps1",
+        "NeuralModules\Advanced-Registry.ps1",
+        "NeuralModules\Update-System.ps1"
     )
     
     $allExist = $true
@@ -213,6 +218,11 @@ function Show-Menu {
     Write-Host " ║ 8.  [MEMORY]   💾 Advanced Memory (Pools, Paging)    ║" -ForegroundColor Magenta
     Write-Host " ║ 9.  [SSD]      💿 SSD/NVMe Optimizer (TRIM, Health)  ║" -ForegroundColor Magenta
     Write-Host " ║ 10. [PROFILE]  🎯 Profile System (Presets)           ║" -ForegroundColor Magenta
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║ 🔥 PHASE 3 EXPERIMENTAL                               ║" -ForegroundColor Red
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║ 10a. [REGISTRY] ⚡ Advanced Registry (HAGS, DVR)     ║" -ForegroundColor Red
+    Write-Host " ║ 10b. [UPDATE]   🔄 Update System (Git Pull)          ║" -ForegroundColor Red
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
     Write-Host " ║ 🧠 AI & MACHINE LEARNING                              ║" -ForegroundColor Green
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
@@ -365,6 +375,8 @@ while ($true) {
         '8' { Invoke-OptimizationModule -Name "ADVANCED MEMORY" -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Memory.ps1") }
         '9' { Invoke-OptimizationModule -Name "SSD/NVMe OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "SSD-NVMe-Optimizer.ps1") }
         '10' { Invoke-OptimizationModule -Name "PROFILE SYSTEM" -ScriptPath (Join-Path $Script:ModuleDir "Profile-System.ps1") }
+        '10a' { Invoke-OptimizationModule -Name "ADVANCED REGISTRY" -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Registry.ps1") }
+        '10b' { Invoke-OptimizationModule -Name "SYSTEM UPDATE" -ScriptPath (Join-Path $Script:ModuleDir "Update-System.ps1") }
         '11' { Invoke-OptimizationModule -Name "AI RECOMMENDATIONS" -ScriptPath (Join-Path $Script:ModuleDir "AI-Recommendations.ps1") }
         '12' { Invoke-OptimizationModule -Name "ML USAGE PATTERNS" -ScriptPath (Join-Path $Script:ModuleDir "ML-Usage-Patterns.ps1") }
         '13' { Invoke-OptimizationModule -Name "PER-GAME PROFILES" -ScriptPath (Join-Path $Script:ModuleDir "Per-Game-Profiles.ps1") }

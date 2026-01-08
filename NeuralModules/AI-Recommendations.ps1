@@ -345,6 +345,9 @@ function Get-SystemScore {
     
     $score = 100
     
+    
+    # Registry Status (Phase 3)
+    $recommendations += Get-RegistryOptimizationStatus
     # Performance penalties
     if ($SystemProfile.Performance.CpuUsage -gt 80) { $score -= 10 }
     if ($SystemProfile.Performance.RamUsagePercent -gt 85) { $score -= 15 }
@@ -392,6 +395,8 @@ function Get-SmartRecommendations {
     # Optimization Status (Phase 2 Awareness)
     $recommendations += Get-OptimizationStatusRecommendations
     
+    # Registry Status (Phase 3)
+    $recommendations += Get-RegistryOptimizationStatus
     
     # Sort by priority
     $recommendations = $recommendations | Sort-Object -Property Priority -Descending
@@ -838,6 +843,58 @@ function Show-Recommendations {
 # ============================================================================
 # MAIN
 # ============================================================================
+
+# ============================================================================
+# REGISTRY HEURISTICS
+# ============================================================================
+
+function Get-RegistryOptimizationStatus {
+    $recommendations = @()
+
+    # HAGS Check
+    $hags = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -ErrorAction SilentlyContinue
+    if (-not $hags -or $hags.HwSchMode -ne 2) {
+        $recommendations += @{
+            Title       = "HAGS Desactivado"
+            Description = "Hardware-Accelerated GPU Scheduling puede reducir latencia."
+            Action      = "Ejecutar: Advanced-Registry.ps1"
+            Priority    = 70
+            Risk        = "Medium"
+            Impact      = "Medium"
+            Category    = "Registry"
+        }
+    }
+
+    # GameDVR FSE
+    $fse = Get-ItemProperty "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -ErrorAction SilentlyContinue
+    if (-not $fse -or $fse.GameDVR_FSEBehaviorMode -ne 2) {
+        $recommendations += @{
+            Title       = "Full-Screen Optimization Activo"
+            Description = "Desactivar FSE puede mejorar frame pacing y reducir input lag."
+            Action      = "Ejecutar: Advanced-Registry.ps1"
+            Priority    = 65
+            Risk        = "Low"
+            Impact      = "Medium"
+            Category    = "Registry"
+        }
+    }
+    
+    # Network Throttling
+    $throttle = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -ErrorAction SilentlyContinue
+    if (-not $throttle -or $throttle.NetworkThrottlingIndex -ne 0xFFFFFFFF) {
+        $recommendations += @{
+            Title       = "Throttling de Red Activo"
+            Description = "Windows limita el tráfico multimedia/juegos. Desactívalo."
+            Action      = "Ejecutar: Advanced-Registry.ps1"
+            Priority    = 80
+            Risk        = "Low"
+            Impact      = "High"
+            Category    = "Registry"
+        }
+    }
+
+    return $recommendations
+}
 
 Write-Section "AI-POWERED RECOMMENDATIONS v6.0"
 
