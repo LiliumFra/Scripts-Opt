@@ -191,65 +191,72 @@ function Show-Banner {
     Write-Host " System: $($hw.CpuVendor) | RAM: $($hw.RamGB)GB | GPU: $($hw.GpuName)" -ForegroundColor DarkGray
     Write-Host " Lang:   $($global:NeuralLang) (Auto-Detected)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host " [1] $(Msg 'Menu.Option.1')" -ForegroundColor White
-    Write-Host " [2] $(Msg 'Menu.Option.2')" -ForegroundColor White
-    Write-Host " [3] $(Msg 'Menu.Option.3')" -ForegroundColor White
-    Write-Host " [4] $(Msg 'Menu.Option.4')" -ForegroundColor White
-    Write-Host " [5] $(Msg 'Menu.Option.5')" -ForegroundColor White
-    Write-Host " [6] $(Msg 'Menu.Option.6')" -ForegroundColor White
-    Write-Host " [7] $(Msg 'Menu.Option.7')" -ForegroundColor White
-    Write-Host " [8] $(Msg 'Menu.Option.8')" -ForegroundColor White
-    Write-Host " [9] $(Msg 'Menu.Option.9')" -ForegroundColor White
-    Write-Host ""
-    Write-Host " [X] $(Msg 'Menu.Option.X')" -ForegroundColor Red
-    Write-Host ""
-    
-    return Read-Host " >> Seleccione una opción / Select option"
 }
 
 function Show-Menu {
     Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host " ║ 📋 OPTIMIZACIONES STANDARD                            ║" -ForegroundColor White
+    Write-Host " ║                MAIN MENU                              ║" -ForegroundColor White
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 1.  [BOOT]     Optimizar Arranque (BCD + NTFS)       ║" -ForegroundColor White
-    Write-Host " ║ 2.  [DEBLOAT]  Eliminar Apps + Privacidad            ║" -ForegroundColor White
-    Write-Host " ║ 3.  [DISK]     Limpieza Profunda + Red               ║" -ForegroundColor White
-    Write-Host " ║ 4.  [GAMING]   Optimizar para Juegos (Standard)      ║" -ForegroundColor White
-    Write-Host " ║ 5.  [THERMAL]  Optimizar Ventiladores                ║" -ForegroundColor White
-    Write-Host " ║ 6.  [ALL]      ⚡ EJECUTAR TODO ⚡                     ║" -ForegroundColor Cyan
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 🔥 OPTIMIZACIONES ULTRA (NUEVO v5.0)                  ║" -ForegroundColor Magenta
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 7.  [ULTRA]    🎮 Advanced Gaming (MSI, HPET, Net)   ║" -ForegroundColor Magenta
-    Write-Host " ║ 8.  [MEMORY]     Advanced Memory (Pools, Paging)     ║" -ForegroundColor Magenta
-    Write-Host " ║ 9.  [SSD]      💿 SSD/NVMe Optimizer (TRIM, Health)  ║" -ForegroundColor Magenta
-    Write-Host " ║ 10. [PROFILE]  🎯 Profile System (Presets)           ║" -ForegroundColor Magenta
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 🔥 PHASE 3 EXPERIMENTAL                               ║" -ForegroundColor Red
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 10a. [REGISTRY] ⚡ Advanced Registry (HAGS, DVR)     ║" -ForegroundColor Red
-    Write-Host " ║ 10b. [UPDATE]   🔄 Update System (Git Pull)          ║" -ForegroundColor Red
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 🧠 AI & MACHINE LEARNING                              ║" -ForegroundColor Green
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 11. [AI]       🤖 AI Recommendation Engine           ║" -ForegroundColor Green
-    Write-Host " ║ 12. [ML]       🧠 ML Usage Patterns                  ║" -ForegroundColor Green
-    Write-Host " ║ 13. [GAMEPRO]  🎮 Per-Game Profiles                  ║" -ForegroundColor Green
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 🛠️ HERRAMIENTAS                                       ║" -ForegroundColor Yellow
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 14. [MONITOR]  📊 Monitor Tiempo Real                ║" -ForegroundColor White
-    Write-Host " ║ 15. [BENCH]    ⚡ Benchmark Suite                    ║" -ForegroundColor White
-    Write-Host " ║ 16. [HEALTH]   🏥 Health Check                       ║" -ForegroundColor White
-    Write-Host " ║ 17. [CACHE]    🗃️ Neural Cache (Steam/Games)         ║" -ForegroundColor White
-    Write-Host " ║ 18. [INFO]     ℹ️ Hardware Profile                    ║" -ForegroundColor White
-    Write-Host " ║ 19. [NET]      🌐 Network Diagnostics                ║" -ForegroundColor White
-    Write-Host " ║ 20. [ROLLBACK] 🔄 Revertir Cambios                   ║" -ForegroundColor Red
-    Write-Host " ║ 21. [REPORT]   📈 Performance Report                 ║" -ForegroundColor Yellow
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 0.  [EXIT]     Salir                                  ║" -ForegroundColor DarkGray
+    Write-Host " ║ 1.  🚀 QUICK OPTIMIZE (Recommended)                   ║" -ForegroundColor Green
+    Write-Host " ║     (Boot, Debloat, Disk, Gaming Standard)            ║" -ForegroundColor Gray
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ 2.  🧠 AI SMART OPTIMIZE                              ║" -ForegroundColor Magenta
+    Write-Host " ║     (Analyzes hardware & applies best tweaks)         ║" -ForegroundColor Gray
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ 3.  🛠️ ADVANCED TOOLS                                 ║" -ForegroundColor Yellow
+    Write-Host " ║     (Manual selection, Ultra Tweaks, Network, SSD)    ║" -ForegroundColor Gray
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ 4.  🛡️ SAFETY & RESTORE                               ║" -ForegroundColor White
+    Write-Host " ║     (Backups, Restore Points, Undo Changes)           ║" -ForegroundColor Gray
+    Write-Host " ║ ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║ 0.  EXIT                                              ║" -ForegroundColor DarkGray
     Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
+    return Read-Host " >> Seleccione una opción / Select option"
+}
+
+function Show-AdvancedMenu {
+    Clear-Host
+    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host " ║              ADVANCED TOOLS                           ║" -ForegroundColor Yellow
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║ [STANDARD MODULES]                                    ║" -ForegroundColor White
+    Write-Host " ║ 1. Boot Optimization                                  ║" -ForegroundColor Gray
+    Write-Host " ║ 2. Debloat Suite (Apps + Privacy)                     ║" -ForegroundColor Gray
+    Write-Host " ║ 3. Disk Hygiene (Cleanup)                             ║" -ForegroundColor Gray
+    Write-Host " ║ 4. Gaming Optimization (Standard)                     ║" -ForegroundColor Gray
+    Write-Host " ║ 5. Thermal Optimization                               ║" -ForegroundColor Gray
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ [ULTRA MODULES]                                       ║" -ForegroundColor Magenta
+    Write-Host " ║ 6. Advanced Gaming (MSI, HPET, Latency)               ║" -ForegroundColor Magenta
+    Write-Host " ║ 7. Advanced Memory (Pools, Pagefile)                  ║" -ForegroundColor Magenta
+    Write-Host " ║ 8. SSD/NVMe Optimizer                                 ║" -ForegroundColor Magenta
+    Write-Host " ║ 9. Advanced Registry (Experimental)                   ║" -ForegroundColor Red
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ [TOOLS]                                               ║" -ForegroundColor Green
+    Write-Host " ║ 10. System Monitor                                    ║" -ForegroundColor Green
+    Write-Host " ║ 11. Network Diagnostics                               ║" -ForegroundColor Green
+    Write-Host " ║ 12. Health Check                                      ║" -ForegroundColor Green
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ 0. Back to Main Menu                                  ║" -ForegroundColor White
+    Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+    return Read-Host " >> Select Tool"
+}
+
+function Show-SafetyMenu {
+    Clear-Host
+    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host " ║             SAFETY & RESTORE                          ║" -ForegroundColor White
+    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║ 1. Create System Restore Point                        ║" -ForegroundColor Green
+    Write-Host " ║ 2. Rollback Last Optimization (Undo)                  ║" -ForegroundColor Yellow
+    Write-Host " ║ 3. View Registry Backups                              ║" -ForegroundColor Gray
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ 0. Back to Main Menu                                  ║" -ForegroundColor White
+    Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+    return Read-Host " >> Select Option"
 }
 
 # ============================================================================
@@ -340,85 +347,88 @@ if (-not $SkipRestore) {
 }
 
 # Main loop
+# ============================================================================
+# MAIN LOOP
+# ============================================================================
+
 while ($true) {
     Show-Banner
-    Show-Menu
-    
-    $selection = Read-Host " >> Opción"
-    
+    $selection = Show-Menu
+
     switch ($selection) {
-        '1' { Invoke-OptimizationModule -Name "BOOT OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Boot-Optimization.ps1"); Wait-ForKeyPress }
-        '2' { Invoke-OptimizationModule -Name "DEBLOAT SUITE" -ScriptPath (Join-Path $Script:ModuleDir "Debloat-Suite.ps1"); Wait-ForKeyPress }
-        '3' { Invoke-OptimizationModule -Name "DISK and NETWORK" -ScriptPath (Join-Path $Script:ModuleDir "Disk-Hygiene.ps1"); Wait-ForKeyPress }
-        '4' { Invoke-OptimizationModule -Name "GAMING OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Gaming-Optimization.ps1"); Wait-ForKeyPress }
-        '5' { Invoke-OptimizationModule -Name "THERMAL OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1"); Wait-ForKeyPress }
-        '6' {
-            $startAll = Get-Date
-            Write-Log "=== FULL OPTIMIZATION STARTED ===" -Level Info -LogPath $Script:LogFile
-            
-            $results = @{
-                Boot    = Invoke-OptimizationModule -Name "BOOT" -ScriptPath (Join-Path $Script:ModuleDir "Boot-Optimization.ps1")
-                Debloat = Invoke-OptimizationModule -Name "DEBLOAT" -ScriptPath (Join-Path $Script:ModuleDir "Debloat-Suite.ps1")
-                Disk    = Invoke-OptimizationModule -Name "DISK" -ScriptPath (Join-Path $Script:ModuleDir "Disk-Hygiene.ps1")
-                Gaming  = Invoke-OptimizationModule -Name "GAMING" -ScriptPath (Join-Path $Script:ModuleDir "Gaming-Optimization.ps1")
-                Thermal = Invoke-OptimizationModule -Name "THERMAL" -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1")
-            }
-            
-            $totalTime = ((Get-Date) - $startAll).TotalSeconds
-            $successCount = ($results.Values | Where-Object { $_ -eq $true }).Count
-            
-            Write-Host ''
-            Write-Host ' ═══════════════════════════════════════════════════════' -ForegroundColor Green
-            Write-Host '   ✓ OPTIMIZACIÓN COMPLETA FINALIZADA' -ForegroundColor Green
-            Write-Host "   Módulos exitosos: $successCount/5" -ForegroundColor Green
-            Write-Host "   Tiempo: $([math]::Round($totalTime, 2))s" -ForegroundColor Green
-            Write-Host ' ═══════════════════════════════════════════════════════' -ForegroundColor Green
-            
-            Get-PerformanceReport
-            Wait-ForKeyPress
-        }
-        '7' { Invoke-OptimizationModule -Name "ADVANCED GAMING" -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Gaming.ps1") }
-        '8' { Invoke-OptimizationModule -Name "ADVANCED MEMORY" -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Memory.ps1") }
-        '9' { Invoke-OptimizationModule -Name "SSD/NVMe OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "SSD-NVMe-Optimizer.ps1") }
-        '10' { Invoke-OptimizationModule -Name "PROFILE SYSTEM" -ScriptPath (Join-Path $Script:ModuleDir "Profile-System.ps1") }
-        '10a' { Invoke-OptimizationModule -Name "ADVANCED REGISTRY" -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Registry.ps1") }
-        '10b' { Invoke-OptimizationModule -Name "SYSTEM UPDATE" -ScriptPath (Join-Path $Script:ModuleDir "Update-System.ps1") }
-        '11' { Invoke-OptimizationModule -Name "AI RECOMMENDATIONS" -ScriptPath (Join-Path $Script:ModuleDir "AI-Recommendations.ps1") }
-        '12' { Invoke-OptimizationModule -Name "ML USAGE PATTERNS" -ScriptPath (Join-Path $Script:ModuleDir "ML-Usage-Patterns.ps1") }
-        '13' { Invoke-OptimizationModule -Name "PER-GAME PROFILES" -ScriptPath (Join-Path $Script:ModuleDir "Per-Game-Profiles.ps1") }
-        '14' { Invoke-OptimizationModule -Name "NETWORK OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Network-Optimizer.ps1"); Wait-ForKeyPress }
-        '15' { Invoke-OptimizationModule -Name "SERVICE MANAGER" -ScriptPath (Join-Path $Script:ModuleDir "Service-Manager.ps1"); Wait-ForKeyPress }
-        '16' { Invoke-OptimizationModule -Name "PRIVACY GUARDIAN" -ScriptPath (Join-Path $Script:ModuleDir "Privacy-Guardian.ps1"); Wait-ForKeyPress }
-        '17' { Invoke-OptimizationModule -Name "VISUAL FX" -ScriptPath (Join-Path $Script:ModuleDir "Visual-FX.ps1"); Wait-ForKeyPress }
-        '18' { Invoke-OptimizationModule -Name "SYSTEM MONITOR" -ScriptPath (Join-Path $Script:ModuleDir "System-Monitor.ps1") }
-        '19' { Invoke-OptimizationModule -Name "BENCHMARK SUITE" -ScriptPath (Join-Path $Script:ModuleDir "Benchmark-Suite.ps1") }
-        '20' { Invoke-OptimizationModule -Name "HEALTH CHECK" -ScriptPath (Join-Path $Script:ModuleDir "Health-Check.ps1") }
-        '21' {
-            # NeuralCache logic
-            $ncPath = Join-Path $Script:ScriptDir "NeuralCache-Diagnostic.ps1"
-            if (Test-Path $ncPath) { Invoke-OptimizationModule -Name "NEURAL CACHE" -ScriptPath $ncPath }
-            else { 
-                # Fallback to NeuralModules if moved there
-                $ncPathMod = Join-Path $Script:ModuleDir "NeuralCache-Diagnostic.ps1"
-                if (Test-Path $ncPathMod) { Invoke-OptimizationModule -Name "NEURAL CACHE" -ScriptPath $ncPathMod }
-                else { Write-Host " [!] NeuralCache no encontrado" -ForegroundColor Red }
+        '1' { 
+            # QUICK OPTIMIZE (Legacy "Run ALL")
+            Write-Host " [🚀] Starting Quick Optimization..." -ForegroundColor Green
+            $modules = @("Boot-Optimization.ps1", "Debloat-Suite.ps1", "Disk-Hygiene.ps1", "Gaming-Optimization.ps1", "Thermal-Optimization.ps1")
+            foreach ($m in $modules) {
+                Invoke-OptimizationModule -Name $m.Replace(".ps1", "") -ScriptPath (Join-Path $Script:ModuleDir $m)
             }
             Wait-ForKeyPress
         }
-        '22' { Show-HardwareInfo; Wait-ForKeyPress }
-        '23' { Test-NetworkPerformance; Wait-ForKeyPress }
-        '24' { Invoke-Rollback -Confirm; Wait-ForKeyPress }
-        '25' { Get-PerformanceReport; Wait-ForKeyPress }
+        
+        '2' {
+            # AI OPTIMIZATION
+            Invoke-OptimizationModule -Name "AI-RECOMMENDATIONS" -ScriptPath (Join-Path $Script:ModuleDir "AI-Recommendations.ps1")
+            Wait-ForKeyPress
+        }
+        
+        '3' {
+            # ADVANCED TOOLS SUB-MENU
+            while ($true) {
+                $advSel = Show-AdvancedMenu
+                if ($advSel -eq '0') { break }
+                switch ($advSel) {
+                    '1' { Invoke-OptimizationModule -Name 'BOOT' -ScriptPath (Join-Path $Script:ModuleDir "Boot-Optimization.ps1"); Wait-ForKeyPress }
+                    '2' { Invoke-OptimizationModule -Name 'DEBLOAT' -ScriptPath (Join-Path $Script:ModuleDir "Debloat-Suite.ps1"); Wait-ForKeyPress }
+                    '3' { Invoke-OptimizationModule -Name 'DISK' -ScriptPath (Join-Path $Script:ModuleDir "Disk-Hygiene.ps1"); Wait-ForKeyPress }
+                    '4' { Invoke-OptimizationModule -Name 'GAMING' -ScriptPath (Join-Path $Script:ModuleDir "Gaming-Optimization.ps1"); Wait-ForKeyPress }
+                    '5' { Invoke-OptimizationModule -Name 'THERMAL' -ScriptPath (Join-Path $Script:ModuleDir "Thermal-Optimization.ps1"); Wait-ForKeyPress }
+                    '6' { Invoke-OptimizationModule -Name 'ULTRA-GAMING' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Gaming.ps1"); Wait-ForKeyPress }
+                    '7' { Invoke-OptimizationModule -Name 'ADV-MEMORY' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Memory.ps1"); Wait-ForKeyPress }
+                    '8' { Invoke-OptimizationModule -Name 'SSD-NVME' -ScriptPath (Join-Path $Script:ModuleDir "SSD-NVMe-Optimizer.ps1"); Wait-ForKeyPress }
+                    '9' { Invoke-OptimizationModule -Name 'REGISTRY' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Registry.ps1"); Wait-ForKeyPress }
+                    '10' { Invoke-OptimizationModule -Name 'MONITOR' -ScriptPath (Join-Path $Script:ModuleDir "System-Monitor.ps1"); Wait-ForKeyPress }
+                    '11' { Invoke-OptimizationModule -Name 'NETWORK' -ScriptPath (Join-Path $Script:ModuleDir "Network-Optimizer.ps1"); Wait-ForKeyPress }
+                    '12' { Invoke-OptimizationModule -Name 'HEALTH' -ScriptPath (Join-Path $Script:ModuleDir "Health-Check.ps1"); Wait-ForKeyPress }
+                    default { Write-Host "Invalid Option" -ForegroundColor Red; Start-Sleep 1 }
+                }
+            }
+        }
+        
+        '4' {
+            # SAFETY MENU
+            while ($true) {
+                $safeSel = Show-SafetyMenu
+                if ($safeSel -eq '0') { break }
+                switch ($safeSel) {
+                    '1' { 
+                        Write-Host "Creating Restore Point..." -ForegroundColor Yellow
+                        New-SystemRestorePoint -Description "Manual_User_Request"
+                        Wait-ForKeyPress
+                    }
+                    '2' {
+                        Write-Host "Rollback feature requires a generic restore point mechanism or specific undo scripts." -ForegroundColor Yellow
+                        Write-Host "For now, please use System Restore." -ForegroundColor Yellow
+                        Wait-ForKeyPress
+                    }
+                    '3' {
+                        $backupDir = Join-Path $Script:ModuleDir "..\Backups"
+                        if (Test-Path $backupDir) { Invoke-Item $backupDir } else { Write-Host "No backup folder found." -ForegroundColor Yellow }
+                    }
+                }
+            }
+        }
+        
         '0' { 
-            Write-Host " [i] Saliendo..." -ForegroundColor Gray
-            Start-Sleep -Seconds 1
-            Stop-Transcript -ErrorAction SilentlyContinue
-            exit 0
+            Write-Host " [👋] Exiting..." -ForegroundColor Cyan
+            exit 
         }
-        default {
-            Write-Host " [!] Opción inválida" -ForegroundColor Yellow
+        
+        'q' { exit }
+        
+        default { 
+            Write-Host " [!] Invalid Option" -ForegroundColor Yellow
             Start-Sleep -Seconds 1
         }
     }
 }
-

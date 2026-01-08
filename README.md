@@ -50,15 +50,51 @@
 
 ## 🚀 How to Use
 
-1. **Download** the repository (Clone or Zip).
-2. Double-click **`Run-Optimizer.bat`**.
-   - *Automatically requests Admin privileges and launches the Neural Interface.*
-3. **Select an Option**:
-   - `[1-5]`: Standard individual optimizations.
-   - `[6]`: **Run ALL Standard Modules**.
-   - `[7-9]`: Ultra performance modules (Use with care!).
-   - `[11-13]`: AI and ML analysis.
-   - `[20]`: **Health Check** to verify system integrity.
+### 1️⃣ Installation
+
+1. **Download** the latest version (Clone or Zip).
+2. Right-click `Run-Optimizer.bat` and select **Run as Administrator**.
+   - *It will automatically request privileges and bypass execution policy safely.*
+
+### 2️⃣ Main Menu Navigation
+
+The new Neural Interface is divided into 4 intuitive categories:
+
+#### **[1] 🚀 QUICK OPTIMIZE**
+
+- **Best for beginners.**
+- Runs a curated sequence of safe, high-impact modules:
+  - `Boot-Optimization`: Faster startup.
+  - `Debloat-Suite`: Removes bloatware.
+  - `Disk-Hygiene`: Cleans junk files.
+  - `Gaming-Optimization`: Standard gaming tweaks.
+
+#### **[2] 🧠 AI SMART OPTIMIZE**
+
+- **Interactive Intelligence.**
+- Scans your specific hardware (CPU, GPU, RAM, Storage).
+- **NEW**: Generates a list of tailored recommendations.
+- **NEW**: Interactive prompt asks if you want to **Auto-Apply** high-priority fixes immediately.
+
+#### **[3] 🛠️ ADVANCED TOOLS**
+
+- **For power users.** Opens a sub-menu with granular control:
+  - `Ultra Gaming`: MSI Mode, HPET, specific latency tweaks.
+  - `Advanced Memory`: Pagefile tuning, large page support.
+  - `SSD/NVMe`: Drive-specific optimizations.
+  - `Network`: TCP/IP stack tuning (BBR, CTCP).
+  - `System Monitor`: Real-time resource tracking.
+
+#### **[4] 🛡️ SAFETY & RESTORE**
+
+- **Safety first.**
+- **Create Restore Point**: Manually capture system state.
+- **View Backups**: Open the dedicated registry backup folder.
+- **Rollback**: Instructions on how to undo changes via System Restore.
+
+### 3️⃣ Health Check
+
+- Run **Health-Check** (Option 12 in Advanced) to verify your system integrity (SFC/DISM) after heavy optimization.
 
 ## ⚠️ Disclaimer
 

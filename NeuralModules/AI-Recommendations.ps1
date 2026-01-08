@@ -425,6 +425,7 @@ function Get-SmartRecommendations {
             Risk        = "Low"
             Impact      = "Critical"
             Category    = "Storage"
+            Module      = "Disk-Hygiene.ps1"
         }
     }
 
@@ -440,6 +441,7 @@ function Get-SmartRecommendations {
             Risk        = "Medium"
             Impact      = "Critical"
             Category    = "Memory"
+            Module      = $null
         }
     }
     elseif ($memPressure.Status -eq "High") {
@@ -451,6 +453,7 @@ function Get-SmartRecommendations {
             Risk        = "Low"
             Impact      = "Medium"
             Category    = "Memory"
+            Module      = "Advanced-Memory.ps1"
         }
     }
 
@@ -467,6 +470,7 @@ function Get-SmartRecommendations {
                 Risk        = "Low"
                 Impact      = "Medium"
                 Category    = "Gaming"
+                Module      = "Gaming-Optimization.ps1"
             }
         }
     }
@@ -487,6 +491,7 @@ function Get-ProfileRecommendation {
         Risk        = "Low"
         Impact      = "High"
         Category    = "Profile"
+        Module      = "Profile-System.ps1"
     }
     
     switch ($workload) {
@@ -529,6 +534,7 @@ function Get-HardwareRecommendations {
             Risk        = "Low"
             Impact      = "Medium"
             Category    = "Storage"
+            Module      = "SSD-NVMe-Optimizer.ps1"
         }
     }
     
@@ -542,6 +548,7 @@ function Get-HardwareRecommendations {
             Risk        = "Low"
             Impact      = "Medium"
             Category    = "Memory"
+            Module      = "Advanced-Memory.ps1"
         }
     }
     elseif ($Hardware.RamGB -lt 8) {
@@ -553,6 +560,7 @@ function Get-HardwareRecommendations {
             Risk        = "Low"
             Impact      = "High"
             Category    = "Memory"
+            Module      = "Advanced-Memory.ps1"
         }
     }
     
@@ -566,6 +574,7 @@ function Get-HardwareRecommendations {
             Risk        = "Medium"
             Impact      = "High"
             Category    = "GPU"
+            Module      = "Advanced-Gaming.ps1"
         }
     }
     
@@ -586,6 +595,7 @@ function Get-OptimizationStatusRecommendations {
             Risk        = "Low"
             Impact      = "High"
             Category    = "Network"
+            Module      = "Network-Optimizer.ps1"
         }
     }
 
@@ -600,6 +610,7 @@ function Get-OptimizationStatusRecommendations {
             Risk        = "Low"
             Impact      = "Privacy"
             Category    = "Privacy"
+            Module      = "Privacy-Guardian.ps1"
         }
     }
     
@@ -621,6 +632,7 @@ function Get-PerformanceRecommendations {
             Risk        = "Low"
             Impact      = "Medium"
             Category    = "Performance"
+            Module      = "System-Monitor.ps1"
         }
     }
     
@@ -634,6 +646,7 @@ function Get-PerformanceRecommendations {
             Risk        = "Low"
             Impact      = "High"
             Category    = "Memory"
+            Module      = "Advanced-Memory.ps1"
         }
     }
     
@@ -647,6 +660,7 @@ function Get-PerformanceRecommendations {
             Risk        = "Low"
             Impact      = "High"
             Category    = "Storage"
+            Module      = "Disk-Hygiene.ps1"
         }
     }
     
@@ -660,6 +674,7 @@ function Get-PerformanceRecommendations {
             Risk        = "Low"
             Impact      = "Medium"
             Category    = "Performance"
+            Module      = "Debloat-Suite.ps1"
         }
     }
     
@@ -681,6 +696,7 @@ function Get-HealthRecommendations {
             Risk        = "Critical"
             Impact      = "Critical"
             Category    = "Health"
+            Module      = "SSD-NVMe-Optimizer.ps1"
         }
     }
     
@@ -694,6 +710,7 @@ function Get-HealthRecommendations {
             Risk        = "High"
             Impact      = "High"
             Category    = "Health"
+            Module      = $null
         }
     }
     
@@ -707,6 +724,7 @@ function Get-HealthRecommendations {
             Risk        = "Medium"
             Impact      = "High"
             Category    = "Thermal"
+            Module      = "Thermal-Optimization.ps1"
         }
     }
     
@@ -720,6 +738,7 @@ function Get-HealthRecommendations {
             Risk        = "High"
             Impact      = "Security"
             Category    = "Security"
+            Module      = $null
         }
     }
     
@@ -733,6 +752,7 @@ function Get-HealthRecommendations {
             Risk        = "Low"
             Impact      = "Security"
             Category    = "Updates"
+            Module      = $null
         }
     }
     
@@ -740,8 +760,54 @@ function Get-HealthRecommendations {
 }
 
 # ============================================================================
-# DISPLAY
+# DISPLAY & INTERACTIVE
 # ============================================================================
+
+function Invoke-AIAutoApply {
+    param($Recommendations)
+    
+    $modulesToRun = @()
+    foreach ($rec in $Recommendations) {
+        if ($rec.Module -and $rec.Priority -ge 70) {
+            if ($modulesToRun -notcontains $rec.Module) {
+                $modulesToRun += $rec.Module
+            }
+        }
+    }
+    
+    if ($modulesToRun.Count -gt 0) {
+        Write-Host ""
+        Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Green
+        Write-Host " ║ 🤖 AUTO-APPLY RECOMMENDATIONS                         ║" -ForegroundColor Green
+        Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Green
+        Write-Host " ║ The AI suggests running the following modules:        ║" -ForegroundColor Green
+        foreach ($mod in $modulesToRun) {
+            Write-Host " ║  • $mod" -ForegroundColor White
+        }
+        Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Green
+        Write-Host ""
+        
+        $choice = Read-Host " >> Do you want to apply these optimizations now? (Y/N)"
+        if ($choice -eq "Y" -or $choice -eq "S") {
+            foreach ($mod in $modulesToRun) {
+                $scriptPath = Join-Path $PSScriptRoot $mod
+                if (Test-Path $scriptPath) {
+                    Write-Host " >> Running $mod..." -ForegroundColor Cyan
+                    & $scriptPath
+                }
+                else {
+                    $scriptPath2 = Join-Path $PSScriptRoot "..\$mod" # Try parent if in subdir
+                    if (Test-Path $scriptPath2) {
+                        Write-Host " >> Running $mod..." -ForegroundColor Cyan
+                        & $scriptPath2
+                    }
+                }
+            }
+            Write-Host " [OK] All recommended optimizations applied." -ForegroundColor Green
+            Read-Host " Press Enter to continue..."
+        }
+    }
+}
 
 function Show-SystemAnalysis {
     param($SystemProfile)
@@ -798,7 +864,7 @@ function Show-Recommendations {
     param($Recommendations)
     
     Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host " ║  RECOMENDACIONES PERSONALIZADAS                       ║" -ForegroundColor Yellow
+    Write-Host " ║  AI RECOMMENDATIONS                                   ║" -ForegroundColor Yellow
     Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Yellow
     Write-Host ""
     
@@ -909,6 +975,9 @@ $recommendations = Get-SmartRecommendations -Profile $SysProfile
 
 # Show recommendations
 Show-Recommendations -Recommendations $recommendations
+
+# Interactive Auto-Apply
+Invoke-AIAutoApply -Recommendations $recommendations
 
 # Save report
 try {
