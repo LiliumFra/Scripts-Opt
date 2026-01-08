@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     WINDOWS NEURAL OPTIMIZER v5.0 ULTRA
     Controlador Maestro con módulos avanzados integrados.
@@ -103,18 +103,15 @@ function Test-ModulesExist {
         "Advanced-Memory.ps1",
         "SSD-NVMe-Optimizer.ps1",
         "Profile-System.ps1",
-        "NeuralModules\AI-Recommendations.ps1",
-        "NeuralModules\ML-Usage-Patterns.ps1",
-        "NeuralModules\Per-Game-Profiles.ps1",
-        "NeuralModules\Network-Optimizer.ps1",
-        "NeuralModules\Service-Manager.ps1",
-        "NeuralModules\Privacy-Guardian.ps1",
-        "NeuralModules\Network-Optimizer.ps1",
-        "NeuralModules\Service-Manager.ps1",
-        "NeuralModules\Privacy-Guardian.ps1",
-        "NeuralModules\Visual-FX.ps1",
-        "NeuralModules\Advanced-Registry.ps1",
-        "NeuralModules\Update-System.ps1"
+        "AI-Recommendations.ps1",
+        "ML-Usage-Patterns.ps1",
+        "Per-Game-Profiles.ps1",
+        "Network-Optimizer.ps1",
+        "Service-Manager.ps1",
+        "Privacy-Guardian.ps1",
+        "Visual-FX.ps1",
+        "Advanced-Registry.ps1",
+        "Update-System.ps1"
     )
     
     $allExist = $true
@@ -424,3 +421,4 @@ while ($true) {
         }
     }
 }
+
