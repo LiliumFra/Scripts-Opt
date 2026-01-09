@@ -208,7 +208,7 @@ function Optimize-GPUClocks {
         
         foreach ($k in $nvidiaKeys) {
             if (Test-Path $k.Path) {
-                Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc -Rollback
+                Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc
             }
         }
     }
@@ -228,7 +228,7 @@ function Optimize-GPUClocks {
         
         foreach ($k in $amdKeys) {
             if (Test-Path $k.Path) {
-                Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc -Rollback
+                Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc
             }
         }
     }
@@ -252,18 +252,18 @@ function Optimize-Streaming {
     if ($hw.GpuVendor -eq "NVIDIA") {
         # NVENC Priority
         Set-RegistryKey -Path "HKLM:\SOFTWARE\NVIDIA Corporation\Global\NvEncoder" `
-            -Name "EnableAsyncQueue" -Value 1 -Desc "NVENC Async Queue" -Rollback
+            -Name "EnableAsyncQueue" -Value 1 -Desc "NVENC Async Queue"
 
         Set-RegistryKey -Path "HKLM:\SOFTWARE\NVIDIA Corporation\Global\NvEncoder" `
-            -Name "MaxSessionCount" -Value 10 -Desc "NVENC Max Sessions" -Rollback
+            -Name "MaxSessionCount" -Value 10 -Desc "NVENC Max Sessions"
     }
 
     # Audio buffer optimization (Network limits handled in Network-Optimizer)
     $mmPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
 
     # Audio buffer optimization
-    Set-RegistryKey -Path "$mmPath\Tasks\Audio" -Name "Priority" -Value 2 -Desc "Audio Priority" -Rollback
-    Set-RegistryKey -Path "$mmPath\Tasks\Audio" -Name "Scheduling Category" -Value "High" -Type String -Desc "Audio Scheduling" -Rollback
+    Set-RegistryKey -Path "$mmPath\Tasks\Audio" -Name "Priority" -Value 2 -Desc "Audio Priority"
+    Set-RegistryKey -Path "$mmPath\Tasks\Audio" -Name "Scheduling Category" -Value "High" -Type String -Desc "Audio Scheduling"
 
     Write-Host " [OK] Streaming optimization completa" -ForegroundColor Green
     Write-Host ""
@@ -284,15 +284,15 @@ function Optimize-FrameTiming {
     
     # Disable Windows DWM optimizations (can cause stutter)
     Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" `
-        -Name "OverlayTestMode" -Value 5 -Desc "DWM Overlay Mode" -Rollback
+        -Name "OverlayTestMode" -Value 5 -Desc "DWM Overlay Mode"
     
     # GPU Preemption
     Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" `
-        -Name "EnablePreemption" -Value 0 -Desc "GPU Preemption OFF" -Rollback
+        -Name "EnablePreemption" -Value 0 -Desc "GPU Preemption OFF"
     
     # Disable VSync in DWM for borderless fullscreen
     Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" `
-        -Name "OverlayTestMode" -Value 5 -Desc "DWM Test Mode" -Rollback
+        -Name "OverlayTestMode" -Value 5 -Desc "DWM Test Mode"
     
     Write-Host " [OK] Frame timing optimizado" -ForegroundColor Green
     Write-Host ""

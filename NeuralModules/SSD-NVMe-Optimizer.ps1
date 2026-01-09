@@ -144,7 +144,7 @@ function Optimize-NVMePower {
         if (-not (Test-Path $stornvme)) { New-Item -Path $stornvme -Force | Out-Null }
         
         # Idle Timeout to 0 (No sleep)
-        Set-RegistryKey -Path $stornvme -Name "IdlePowerMode" -Value 0 -Desc "NVMe Idle Power Mode" -Rollback
+        Set-RegistryKey -Path $stornvme -Name "IdlePowerMode" -Value 0 -Desc "NVMe Idle Power Mode"
         
         Write-Host " [OK] NVMe Performance Mode activado (No Sleep)" -ForegroundColor Green
         Write-Host ""

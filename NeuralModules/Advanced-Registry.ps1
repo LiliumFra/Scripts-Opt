@@ -36,7 +36,7 @@ function Set-RegistryTweak {
             New-Item -Path $Path -Force | Out-Null
         }
         
-        Set-RegistryKey -Path $Path -Name $Name -Value $Value -Type $Type -Desc $Description -Rollback
+        Set-RegistryKey -Path $Path -Name $Name -Value $Value -Type $Type -Desc $Description
         Write-Host " [Applied] $Description" -ForegroundColor Green
     }
     catch {

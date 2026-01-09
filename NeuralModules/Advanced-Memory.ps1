@@ -145,7 +145,7 @@ function Optimize-MemoryPools {
     }
     
     foreach ($k in $poolKeys) {
-        Set-RegistryKey -Path $memPath -Name $k.Name -Value $k.Value -Desc $k.Desc -Rollback
+        Set-RegistryKey -Path $memPath -Name $k.Name -Value $k.Value -Desc $k.Desc
     }
     
     Write-Host ""
@@ -167,11 +167,11 @@ function Optimize-StandbyList {
     $memPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
     
     # Clear standby list on low memory
-    Set-RegistryKey -Path $memPath -Name "ClearPageFileAtShutdown" -Value 0 -Desc "No clear PageFile (faster boot)" -Rollback
-    Set-RegistryKey -Path $memPath -Name "EnableSuperfetch" -Value 0 -Desc "Superfetch OFF (SSD)" -Rollback
+    Set-RegistryKey -Path $memPath -Name "ClearPageFileAtShutdown" -Value 0 -Desc "No clear PageFile (faster boot)"
+    Set-RegistryKey -Path $memPath -Name "EnableSuperfetch" -Value 0 -Desc "Superfetch OFF (SSD)"
     
     # Memory trimming
-    Set-RegistryKey -Path $memPath -Name "DisablePagingExecutive" -Value 1 -Desc "Lock kernel in RAM" -Rollback
+    Set-RegistryKey -Path $memPath -Name "DisablePagingExecutive" -Value 1 -Desc "Lock kernel in RAM"
     
     Write-Host ""
     Write-Host " [TIP] Para limpiar Standby List manualmente:" -ForegroundColor Cyan
@@ -219,7 +219,7 @@ function Enable-LargePageSupport {
     
     # Registry settings
     $memPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-    Set-RegistryKey -Path $memPath -Name "LargePageMinimum" -Value 0xFFFFFFFF -Desc "Large Page Auto" -Rollback
+    Set-RegistryKey -Path $memPath -Name "LargePageMinimum" -Value 0xFFFFFFFF -Desc "Large Page Auto"
     
     Write-Host ""
 }
@@ -302,11 +302,11 @@ function Optimize-NUMA {
             
             # NUMA optimization for multi-socket systems
             Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" `
-                -Name "DisableTaskOffload" -Value 0 -Desc "Task Offload Enabled" -Rollback
+                -Name "DisableTaskOffload" -Value 0 -Desc "Task Offload Enabled"
             
             # NUMA-aware memory allocation
             $memPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-            Set-RegistryKey -Path $memPath -Name "SecondLevelDataCache" -Value 2048 -Desc "L2 Cache 2MB" -Rollback
+            Set-RegistryKey -Path $memPath -Name "SecondLevelDataCache" -Value 2048 -Desc "L2 Cache 2MB"
             
             Write-Host " [OK] NUMA optimization aplicada" -ForegroundColor Green
         }
