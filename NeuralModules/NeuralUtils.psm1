@@ -443,24 +443,57 @@ function New-SystemRestorePoint {
     param([string]$Description = "Neural Optimizer Auto-Restore")
     
     Write-Section "SYSTEM SAFETY CHECK"
-    Write-Host " [i] $(Msg 'Utils.Restore.Check')" -ForegroundColor Cyan
+    
+    # Check if we should skip asking via global config or parameter (future proofing)
+    # For now, we always ask unless silent mode is implemented later
+    
+    Write-Host " [?] $(Msg 'Utils.Restore.Check')" -ForegroundColor Yellow
+    $response = Read-Host " >> Crear Punto de Restauracion? / Create Restore Point? (Y/N)"
+    
+    if ($response -notmatch '^[Yy]') {
+        Write-Host " [i] Restore Point creation skipped by user." -ForegroundColor Gray
+        return $true # Treat as success to continue execution
+    }
     
     try {
-        $null = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
-        
         if (-not (Test-AdminPrivileges)) {
             Write-Host " [!] $(Msg 'Common.AdminRequired')" -ForegroundColor Yellow
             return $false
         }
 
-        Write-Host " [+] $(Msg 'Utils.Restore.Creating' $Description)" -ForegroundColor Cyan
-        Checkpoint-Computer -Description $Description -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop | Out-Null
+        # Check if System Restore is enabled for System Drive
+        $sysDrive = $env:SystemDrive
+        $status = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
         
-        Write-Host " [OK] $(Msg 'Utils.Restore.Success')" -ForegroundColor Green
-        return $true
+        # Simple check: try to create
+        Write-Host " [+] $(Msg 'Utils.Restore.Creating' $Description)" -ForegroundColor Cyan
+        
+        try {
+            Checkpoint-Computer -Description $Description -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop | Out-Null
+            Write-Host " [OK] $(Msg 'Utils.Restore.Success')" -ForegroundColor Green
+            return $true
+        }
+        catch {
+            $err = $_.Exception.Message
+            Write-Host " [!] $(Msg 'Utils.Restore.Fail')" -ForegroundColor Red
+            Write-Host "     Error: $err" -ForegroundColor Gray
+            
+            if ($err -match "disabled") {
+                Write-Host "     [TIP] System Protection might be disabled on drive C:" -ForegroundColor Yellow
+                Write-Host "     [TIP] Configure System Restore in Windows Settings." -ForegroundColor Yellow
+            }
+            elseif ($err -match "frequency") {
+                Write-Host "     [TIP] A restore point was likely created recently (24h limit)." -ForegroundColor Yellow
+            }
+            
+            # Ask to continue despite error
+            $cont = Read-Host " >> Continue without Restore Point? (Y/N)"
+            if ($cont -match '^[Yy]') { return $true }
+            return $false
+        }
     }
     catch {
-        Write-Host " [!] $(Msg 'Utils.Restore.Fail')" -ForegroundColor Red
+        Write-Host " [!] Critical Error in Restore Point system: $_" -ForegroundColor Red
         return $false
     }
 }
