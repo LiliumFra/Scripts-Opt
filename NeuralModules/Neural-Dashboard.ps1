@@ -7,7 +7,6 @@
 param([switch]$RunLoop)
 
 $ScriptDir = Split-Path $MyInvocation.MyCommand.Path
-$parentDir = Split-Path $ScriptDir -Parent
 $utilsPath = Join-Path $ScriptDir "NeuralUtils.psm1"
 $aiPath = Join-Path $ScriptDir "NeuralAI.psm1"
 

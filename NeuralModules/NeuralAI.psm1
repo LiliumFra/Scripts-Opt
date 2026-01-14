@@ -83,6 +83,38 @@ $Script:TweakLibrary = @(
     # Privacy/Telemetry (from Win11Debloat)
     @{ Id = "Telemetry"; Name = "Disable Telemetry"; Risk = "Medium"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "AllowTelemetry"; ValueOn = 0; ValueOff = 3; Description = "Disable data collection" },
     
+    # === FILESYSTEM OPTIMIZATIONS ===
+    @{ Id = "Ntfs83"; Name = "Disable 8.3 Naming"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disable8dot3 1"; CommandOff = "fsutil behavior set disable8dot3 0"; Description = "Improves NTFS performance" },
+    @{ Id = "NtfsLastAccess"; Name = "Disable Last Access Update"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disablelastaccess 1"; CommandOff = "fsutil behavior set disablelastaccess 0"; Description = "Reduces disk write ops" },
+    @{ Id = "NtfsEncrypt"; Name = "Disable EFS"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disableencryption 1"; CommandOff = "fsutil behavior set disableencryption 0"; Description = "Disables EFS overhead" },
+    
+    # === ADVANCED NETWORK ===
+    @{ Id = "CTCP"; Name = "CTCP Congestion Provider"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set supplemental template=internet congestionprovider=ctcp"; CommandOff = "netsh int tcp set supplemental template=internet congestionprovider=default"; Description = "Better throughput on high latency" },
+    @{ Id = "RscIPv4"; Name = "Enable RSC (IPv4)"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set global rsc=enabled"; CommandOff = "netsh int tcp set global rsc=disabled"; Description = "Receive Segment Coalescing" },
+    @{ Id = "RssIPv4"; Name = "Enable RSS"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set global rss=enabled"; CommandOff = "netsh int tcp set global rss=disabled"; Description = "Receive Side Scaling" },
+    @{ Id = "NetOffload"; Name = "Disable Task Offload"; Risk = "Medium"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "DisableTaskOffload"; ValueOn = 0; ValueOff = 1; Description = "Let NIC handle offloading" },
+    
+    # === PROCESSOR & THREADS ===
+    @{ Id = "Win32Prio"; Name = "Win32 Priority Separation"; Risk = "Medium"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl"; Key = "Win32PrioritySeparation"; ValueOn = 38; ValueOff = 2; Description = "Optimizes for foreground apps (Hex 26)" },
+    @{ Id = "SvcSplit"; Name = "Split Threshold"; Risk = "Medium"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control"; Key = "SvcHostSplitThresholdInKB"; ValueOn = 380000; ValueOff = 38000000; Description = "Better RAM handling for svchost" },
+    @{ Id = "LongPaths"; Name = "Enable Long Paths"; Risk = "Low"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem"; Key = "LongPathsEnabled"; ValueOn = 1; ValueOff = 0; Description = "Removes 260 char limit" },
+    
+    # === MEMORY & CACHE ===
+    @{ Id = "IoPageLock"; Name = "IO Page Lock Limit"; Risk = "High"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "IoPageLockLimit"; ValueOn = 65536; ValueOff = 0; Description = "Boosts I/O throughput" },
+    @{ Id = "NonPagedPool"; Name = "NonPaged Pool Size"; Risk = "High"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "NonPagedPoolSize"; ValueOn = 0; ValueOff = 0; Description = "System managed pool size" },
+    @{ Id = "SecondLevel"; Name = "L2 Cache Size"; Risk = "Medium"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "SecondLevelDataCache"; ValueOn = 0; ValueOff = 0; Description = "Auto-detect L2 cache" },
+    
+    # === GAMING EXTRAS ===
+    @{ Id = "GpuPrio"; Name = "GPU Priority"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "GPU Priority"; ValueOn = 8; ValueOff = 8; Description = "High GPU priority" },
+    @{ Id = "GamesPrio"; Name = "Games Scheduling"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Priority"; ValueOn = 6; ValueOff = 2; Description = "High CPU priority for games" },
+    @{ Id = "GamesSched"; Name = "Games Category"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Scheduling Category"; ValueOn = "High"; ValueOff = "Medium"; Description = "High scheduling category" },
+    
+    # === PRIVACY EXTENSIONS ===
+    @{ Id = "ExpBandwidth"; Name = "Experience Bandwidth"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "RestrictTelemetry"; ValueOn = 0; ValueOff = 0; Description = "Restrict extra telemetry" },
+    @{ Id = "AppTrack"; Name = "Disable App Tracking"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI"; Key = "DisableMFUTracking"; ValueOn = 1; ValueOff = 0; Description = "Disable most frequently used apps" },
+    @{ Id = "Teredo"; Name = "Disable Teredo"; Risk = "Low"; Category = "Network"; CommandOn = "netsh interface teredo set state disabled"; CommandOff = "netsh interface teredo set state default"; Description = "Disable Teredo tunneling" },
+    @{ Id = "ISATAP"; Name = "Disable ISATAP"; Risk = "Low"; Category = "Network"; CommandOn = "netsh interface isatap set state disabled"; CommandOff = "netsh interface isatap set state default"; Description = "Disable ISATAP tunneling" },
+    
     # === LENOVO-SPECIFIC TWEAKS ===
     # These are only applied on Lenovo systems (condition checked at runtime)
     @{ Id = "LenovoHybrid"; Name = "Lenovo Hybrid Mode (dGPU)"; Risk = "Medium"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "HybridMode"; WmiValueOn = "Disable"; WmiValueOff = "Enable"; Description = "Force dedicated GPU for gaming" },
@@ -508,7 +540,7 @@ function Get-BestTweaksForState {
     if ($qTable.ContainsKey($state)) {
         $stateActions = $qTable[$state]
         $stateActions.GetEnumerator() | Where-Object { $_.Value -gt 0 } | Sort-Object Value -Descending | Select-Object -First $TopN | ForEach-Object {
-            $tweakObj = $Script:TweakLibrary | Where-Object { $_.Id -eq $Name }
+            $tweakObj = $Script:TweakLibrary | Where-Object { $_.Id -eq $_.Name }
             $recommendations += [PSCustomObject]@{
                 TweakId     = $_.Name
                 Name        = if ($tweakObj) { $tweakObj.Name } else { $_.Name }
