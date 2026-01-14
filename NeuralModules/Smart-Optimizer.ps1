@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Smart-Optimizer v6.5 ULTRA
     Hardware-aware automatic optimization that adapts to your system.
@@ -21,9 +21,11 @@ if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
     $currentDir = Split-Path $MyInvocation.MyCommand.Path
     $utilsPath = Join-Path $currentDir "NeuralUtils.psm1"
     $plansPath = Join-Path $currentDir "Power-Plans.ps1"
+    $aiPath = Join-Path $currentDir "NeuralAI.psm1"
     
     if (Test-Path $utilsPath) { Import-Module $utilsPath -Force -DisableNameChecking }
     if (Test-Path $plansPath) { Import-Module $plansPath -Force -DisableNameChecking }
+    if (Test-Path $aiPath) { Import-Module $aiPath -Force -DisableNameChecking }
 }
 
 Invoke-AdminCheck -Silent
@@ -739,6 +741,28 @@ function Invoke-SmartOptimization {
     Invoke-NetworkOptimizations $hw
     Invoke-VisualOptimizations $hw
     Invoke-ServiceOptimizations $hw  # Added Smart Services
+    
+    # --- REAL AI INTEGRATION ---
+    if (Get-Command "Get-SimulatedAIResponse" -ErrorAction SilentlyContinue) {
+        Write-Host ""
+        Write-Section "NEURAL AI ENGINE (TRUE-AI)"
+        Write-Host " [IA] Analizando telemetria de hardware..." -ForegroundColor Cyan
+        
+        # In a full version, we would check for NeuralConfig.json API Key here
+        # $aiResponse = Invoke-CloudAIAnalysis -HardwareProfile $hw -ApiKey $config.ApiKey
+        
+        # For now, we utilize the Local Expert System which uses non-linear decision trees
+        $aiTweaks = Get-SimulatedAIResponse -hw $hw
+        
+        if ($aiTweaks) {
+            foreach ($tweak in $aiTweaks) {
+                Write-Host "   [AI] Recommended: $($tweak.Desc)" -ForegroundColor Magenta
+                # Apply the tweak
+                Set-RegistryKey -Path $tweak.Path -Name $tweak.Name -Value $tweak.Value -Type $tweak.Type -Desc $tweak.Desc
+            }
+        }
+    }
+
     # Invoke-PowerOptimizations $hw # Deprecated in favor of Neural Power Plans
     
     # Create/Ensure Plans exist
@@ -764,6 +788,13 @@ function Invoke-SmartOptimization {
     Write-Host " |  Sistema: $(if($hw.IsLaptop){'LAPTOP'}else{'DESKTOP'}) | Tier: $($hw.PerformanceTier)" -ForegroundColor Green
     Write-Host " |  Optimizaciones aplicadas segun tu hardware.         |" -ForegroundColor Green
     Write-Host " |                                                      |" -ForegroundColor Green
+    
+    # Neural Learning Phase
+    if (Get-Command "Invoke-NeuralLearning" -ErrorAction SilentlyContinue) {
+        Write-Host " |  [AI] Learning Phase: Measuring Impact...            |" -ForegroundColor Magenta
+        Invoke-NeuralLearning -ProfileName $hw.PerformanceTier -Hardware $hw
+    }
+    
     Write-Host " |  Reinicia para aplicar todos los cambios.            |" -ForegroundColor Yellow
     Write-Host " ========================================================" -ForegroundColor Green
     Write-Host ""
