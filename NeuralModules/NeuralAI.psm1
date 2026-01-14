@@ -44,24 +44,44 @@ function Save-NeuralBrain {
 function Measure-SystemMetrics {
     param([int]$DurationSeconds = 5)
     
-    Write-Host "   [AI] Measuring System Latency (DPC/Interrupts)..." -ForegroundColor Cyan
+    Write-Host "   [AI] Measuring System Latency & Stability..." -ForegroundColor Cyan
     
     try {
-        # Take 5 samples, 1 second interval
-        $samples = Get-Counter -Counter "\Processor(_Total)\% DPC Time", "\Processor(_Total)\% Interrupt Time" -SampleInterval 1 -MaxSamples $DurationSeconds -ErrorAction Stop
+        # Added Context Switches to detect thrashing
+        $counters = @(
+            "\Processor(_Total)\% DPC Time", 
+            "\Processor(_Total)\% Interrupt Time",
+            "\System\Context Switches/sec"
+        )
         
+        $samples = Get-Counter -Counter $counters -SampleInterval 1 -MaxSamples $DurationSeconds -ErrorAction Stop
+    
         $avgDpc = ($samples.CounterSamples | Where-Object Path -match "dpc" | Measure-Object -Property CookedValue -Average).Average
         $avgInt = ($samples.CounterSamples | Where-Object Path -match "interrupt" | Measure-Object -Property CookedValue -Average).Average
+        $avgCtx = ($samples.CounterSamples | Where-Object Path -match "context" | Measure-Object -Property CookedValue -Average).Average
         
+        # Penalize Context Switches (Thrashing detection)
+        # Normal desktop might have 500-2000. Gaming/Stress > 5000.
+        # Penalty: -1 point for every 1000 switches over 3000 baseline? Smart heuristic needed.
+        $ctxPenalty = 0
+        if ($avgCtx -gt 5000) {
+            $ctxPenalty = [math]::Round(($avgCtx - 5000) / 1000, 2)
+        }
+        
+        # Base Score
+        $rawScore = 100 - ($avgDpc + $avgInt) - $ctxPenalty
+        if ($rawScore -lt 0) { $rawScore = 0 }
+
         return [PSCustomObject]@{
             DpcTime       = [math]::Round($avgDpc, 4)
             InterruptTime = [math]::Round($avgInt, 4)
-            Score         = [math]::Round(100 - ($avgDpc + $avgInt), 2) # Higher is better
+            ContextSwitch = [math]::Round($avgCtx, 0)
+            Score         = [math]::Round($rawScore, 2) # Higher is better
         }
     }
     catch {
         Write-Host "   [!] Failed to measure metrics (PerfCounters might be disabled). Assuming neutral score." -ForegroundColor Yellow
-        return [PSCustomObject]@{ DpcTime = 0; InterruptTime = 0; Score = 50 } # Neutral score
+        return [PSCustomObject]@{ DpcTime = 0; InterruptTime = 0; ContextSwitch = 0; Score = 50 } # Neutral score
     }
 }
 
@@ -76,8 +96,9 @@ function Invoke-NeuralLearning {
     # 1. Measure Effect
     $metrics = Measure-SystemMetrics -DurationSeconds 5
     
-    Write-Host "   [RESULT] DPC Latency: $($metrics.DpcTime)%" -ForegroundColor Green
-    Write-Host "   [RESULT] Interrupts:  $($metrics.InterruptTime)%" -ForegroundColor Green
+    Write-Host "   [RESULT] DPC Latency:     $($metrics.DpcTime)%" -ForegroundColor Green
+    Write-Host "   [RESULT] Interrupts:      $($metrics.InterruptTime)%" -ForegroundColor Green
+    Write-Host "   [RESULT] Context Switch:  $($metrics.ContextSwitch)/sec" -ForegroundColor Green
     Write-Host "   [SCORE]  Optimization Score: $($metrics.Score)/100" -ForegroundColor Cyan
     
     # 2. Update Brain
@@ -112,6 +133,46 @@ function Invoke-NeuralLearning {
     if ($bestRun) {
         Write-Host "   [INSIGHT] Best recorded run: $($bestRun.Score) (Profile: $($bestRun.Profile))" -ForegroundColor Magenta
     }
+    
+    # 4. Active Exploration
+    if ($metrics.Score -lt 80 -and -not $brain.ExplorationLock) {
+        Write-Host "   [AI] Score below threshold (80). Triggering Active Exploration..." -ForegroundColor Yellow
+        Invoke-ExploratoryTweak -CurrentScore $metrics.Score
+    }
+}
+
+function Invoke-ExploratoryTweak {
+    param($CurrentScore)
+    
+    # Valid tweaks to test
+    $tweaks = @(
+        @{ Name = "TimerRes"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"; Key = "GlobalTimerResolutionRequests"; Vald = 1; ValOriginal = 0 },
+        @{ Name = "DynamicTick"; Command = "bcdedit /set disabledynamictick yes"; Rollback = "bcdedit /set disabledynamictick no" }
+    )
+    
+    # Simple Random Choice for now (can be smarter)
+    $tweak = $tweaks | Get-Random
+    
+    Write-Host "   [AI-EXPLORE] Testing Tweak: $($tweak.Name)" -ForegroundColor Magenta
+    
+    # Apply
+    if ($tweak.Command) { cmd /c $tweak.Command | Out-Null }
+    if ($tweak.Path) { Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $tweak.Vald -Force -ErrorAction SilentlyContinue }
+    
+    # Measure Immediate Impact (Quick 3s test)
+    Start-Sleep -Seconds 1
+    $newMetrics = Measure-SystemMetrics -DurationSeconds 3
+    
+    if ($newMetrics.Score -gt $CurrentScore) {
+        Write-Host "   [AI-EXPLORE] SUCCESS! New Score: $($newMetrics.Score) (+$($newMetrics.Score - $CurrentScore)). Keeping change." -ForegroundColor Green
+        # Log success to brain?
+    }
+    else {
+        Write-Host "   [AI-EXPLORE] No improvement ($($newMetrics.Score)). Rolling back." -ForegroundColor DarkGray
+        # Revert
+        if ($tweak.Rollback) { cmd /c $tweak.Rollback | Out-Null }
+        if ($tweak.Path) { Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $tweak.ValOriginal -Force -ErrorAction SilentlyContinue }
+    }
 }
 
 function Get-NeuralRecommendation {
@@ -144,4 +205,4 @@ function Get-NeuralRecommendation {
     return $null
 }
 
-Export-ModuleMember -Function Invoke-NeuralLearning, Get-NeuralRecommendation
+Export-ModuleMember -Function Invoke-NeuralLearning, Get-NeuralRecommendation, Get-NeuralBrain

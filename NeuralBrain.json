@@ -1,0 +1,41 @@
+{
+    "History":  [
+                    {
+                        "Metrics":  {
+                                        "DpcTime":  0,
+                                        "InterruptTime":  0,
+                                        "Score":  50
+                                    },
+                        "Hardware":  "Test-CPU-Intel-Gen13",
+                        "Timestamp":  "2026-01-14 02:52:57",
+                        "Profile":  "Neural Low Latency",
+                        "Tier":  "High",
+                        "Score":  50
+                    },
+                    {
+                        "Metrics":  {
+                                        "DpcTime":  0,
+                                        "InterruptTime":  0,
+                                        "Score":  50
+                                    },
+                        "Hardware":  "Test-CPU-Intel-Gen13",
+                        "Timestamp":  "2026-01-14 02:53:29",
+                        "Profile":  "Neural Low Latency",
+                        "Tier":  "High",
+                        "Score":  50
+                    },
+                    {
+                        "Metrics":  {
+                                        "DpcTime":  0,
+                                        "InterruptTime":  0,
+                                        "ContextSwitch":  0,
+                                        "Score":  50
+                                    },
+                        "Hardware":  "Test-CPU-Intel-Gen13",
+                        "Timestamp":  "2026-01-14 02:56:16",
+                        "Profile":  "Neural Low Latency",
+                        "Tier":  "High",
+                        "Score":  50
+                    }
+                ]
+}
