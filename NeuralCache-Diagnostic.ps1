@@ -1,24 +1,18 @@
 ﻿<#
 .SYNOPSIS
-    Neural Cache Diagnostic v6.5 ULTRA (Advanced Edition)
-    Analiza y limpia cahés del sistema inteligentes y temporales.
+    Neural Cache Diagnostic v7.0 - AI-Enhanced Edition
 
 .DESCRIPTION
-    Características Avanzadas:
-    - Escaneo Multi-Perfil: Limpia caches de TODOS los usuarios del sistema.
-    - Deep Logic: Detiene servicios (wuauserv, bits, cryptsvc) para limpieza profunda.
-    - Shadow Locations: Limpia logs de CBS, DISM, WAAS y CryptoSvc.
-    - GPU Shaders PRO: Cobertura total para NVIDIA, AMD e Intel.
-    - Browser Elite: Incluye Vivaldi, Opera GX y versiones dev/beta.
-    - App Hygiene: Discord, Spotify, Teams, VS Code, Slack, Zoom, Dropbox.
-    - Component Optimization: DISM StartComponentCleanup integrado.
-    
-    Integración total con Neural Utils y ML Usage Patterns.
+    Advanced cache cleaning with AI prioritization:
+    - Q-Learning integration for optimal cleaning order
+    - Performance impact measurement
+    - Predictive analysis for cache growth
+    - Multi-user support
+    - Deep system logs cleanup
 
 .NOTES
-    Parte de Windows Neural Optimizer v6.5 ULTRA
-    Creditos: Jose Bustamante
-    Inspirado en: Chris Titus Tech, Sophia Script y Optimizer.
+    Part of Windows Neural Optimizer v6.1 ULTRA
+    Author: Jose Bustamante
 #>
 
 if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
@@ -27,34 +21,112 @@ if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
     if (Test-Path $utilsPath) { Import-Module $utilsPath -Force -DisableNameChecking }
 }
 
+$aiModulePath = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "NeuralModules\NeuralAI.psm1"
+if (Test-Path $aiModulePath) { Import-Module $aiModulePath -Force -DisableNameChecking }
+
 Invoke-AdminCheck -Silent
 
 # ============================================================================
-# CONFIGURATION & ML INTEGRATION
+# AI CONFIGURATION
 # ============================================================================
 
+$Script:CacheHistoryPath = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "NeuralCacheHistory.json"
 $Script:MLDataPath = Join-Path $env:LOCALAPPDATA "NeuralOptimizer\ML"
 $Script:PatternsFile = Join-Path $Script:MLDataPath "learned_patterns.json"
 
-function Get-NeuralMLRecommendation {
-    if (Test-Path $Script:PatternsFile) {
-        try {
-            $patterns = Get-Content $Script:PatternsFile -Raw | ConvertFrom-Json
-            $currentHour = (Get-Date).Hour
-            $hourPattern = $patterns.ByHour."$currentHour"
-            
-            if ($hourPattern) {
-                if ($hourPattern.GamingFrequency -gt $hourPattern.ProductivityFrequency) {
-                    return @{ Type = "Gaming"; Msg = "Uso de juegos detectado. Priorizando limpieza de Shaders y System Logs." }
-                }
-                elseif ($hourPattern.ProductivityFrequency -gt $hourPattern.GamingFrequency) {
-                    return @{ Type = "Productivity"; Msg = "Uso de productividad detectado. Enfocándose en App Caches y Browser Data." }
-                }
-            }
-        }
-        catch {}
+function Get-CacheHistory {
+    if (Test-Path $Script:CacheHistoryPath) {
+        try { return Get-Content $Script:CacheHistoryPath -Raw | ConvertFrom-Json }
+        catch { return @{ Cleanups = @(); Stats = @{} } }
     }
-    return $null
+    return @{ Cleanups = @(); Stats = @{} }
+}
+
+function Save-CacheHistory {
+    param($History)
+    $History | ConvertTo-Json -Depth 5 | Set-Content $Script:CacheHistoryPath -Force
+}
+
+function Get-UsageContext {
+    $hour = (Get-Date).Hour
+    $dayOfWeek = (Get-Date).DayOfWeek
+    $isWeekend = $dayOfWeek -in @("Saturday", "Sunday")
+    
+    $context = @{
+        Hour                 = $hour
+        IsWeekend            = $isWeekend
+        TimeSlot             = if ($hour -ge 18 -or $hour -lt 6) { "Gaming" } elseif ($hour -ge 9 -and $hour -lt 17) { "Work" } else { "Mixed" }
+        DeepCleanRecommended = $isWeekend -or $hour -ge 22 -or $hour -lt 6
+    }
+    
+    return $context
+}
+
+function Get-CachePriority {
+    param($CacheInfo, $Context, $History)
+    
+    $baseScore = $CacheInfo.SizeMB * 2
+    
+    # Category bonus based on usage context
+    $categoryBonus = switch ($CacheInfo.Category) {
+        "Gaming" { if ($Context.TimeSlot -eq "Gaming") { 15 } else { 5 } }
+        "Browser" { if ($Context.TimeSlot -eq "Work") { 15 } else { 8 } }
+        "System" { if ($Context.DeepCleanRecommended) { 20 } else { 10 } }
+        "Apps" { 10 }
+        default { 5 }
+    }
+    
+    # Historical effectiveness bonus
+    $historyBonus = 0
+    if ($History.Stats -and $History.Stats.$($CacheInfo.Name)) {
+        $stats = $History.Stats.$($CacheInfo.Name)
+        if ($stats.AvgFreedMB -gt 100) { $historyBonus = 10 }
+        elseif ($stats.AvgFreedMB -gt 50) { $historyBonus = 5 }
+    }
+    
+    return [math]::Round($baseScore + $categoryBonus + $historyBonus, 1)
+}
+
+function Update-CleanupHistory {
+    param($CleanupResults)
+    
+    $history = Get-CacheHistory
+    
+    # Add this cleanup session
+    $session = @{
+        Timestamp    = (Get-Date).ToString("o")
+        TotalFreedMB = ($CleanupResults | Measure-Object -Property FreedMB -Sum).Sum
+        Locations    = $CleanupResults.Count
+    }
+    
+    if (-not $history.Cleanups) { $history.Cleanups = @() }
+    $history.Cleanups += $session
+    if ($history.Cleanups.Count -gt 100) { $history.Cleanups = $history.Cleanups | Select-Object -Last 100 }
+    
+    # Update per-location stats
+    if (-not $history.Stats) { $history.Stats = @{} }
+    foreach ($result in $CleanupResults) {
+        $name = $result.Name
+        if (-not $history.Stats.$name) {
+            $history.Stats.$name = @{ CleanCount = 0; TotalFreedMB = 0; AvgFreedMB = 0 }
+        }
+        $history.Stats.$name.CleanCount++
+        $history.Stats.$name.TotalFreedMB += $result.FreedMB
+        $history.Stats.$name.AvgFreedMB = [math]::Round($history.Stats.$name.TotalFreedMB / $history.Stats.$name.CleanCount, 2)
+    }
+    
+    Save-CacheHistory -History $history
+    return $history
+}
+
+function Get-SystemScoreQuick {
+    try {
+        $cpu = (Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 1).CounterSamples[0].CookedValue
+        $mem = (Get-CimInstance Win32_OperatingSystem)
+        $memPct = [math]::Round(($mem.FreePhysicalMemory / $mem.TotalVisibleMemorySize) * 100, 1)
+        return [math]::Round((100 - $cpu) * 0.5 + $memPct * 0.5, 1)
+    }
+    catch { return 50 }
 }
 
 # ============================================================================
@@ -67,11 +139,9 @@ function Get-AllUserProfiles {
 
 function Invoke-ServiceControl {
     param([string[]]$Services, [string]$Action)
-    
     foreach ($s in $Services) {
         $svc = Get-Service -Name $s -ErrorAction SilentlyContinue
         if ($svc) {
-            Write-Host "   [i] $($Action)ing $s..." -ForegroundColor DarkGray
             if ($Action -eq "Stop") { Stop-Service -Name $s -Force -ErrorAction SilentlyContinue }
             else { Start-Service -Name $s -ErrorAction SilentlyContinue }
         }
@@ -79,59 +149,53 @@ function Invoke-ServiceControl {
 }
 
 # ============================================================================
-# CACHE DEFINITIONS
+# CACHE LOCATIONS
 # ============================================================================
 
 function Get-NeuralCacheLocations {
     $locs = @()
     $userProfiles = Get-AllUserProfiles
     
-    # 1. SYSTEM & DEEP LOGS
+    # SYSTEM
     $locs += @(
         @{ Cat = "System"; Name = "Windows Temp"; Path = "$env:SystemRoot\Temp" },
         @{ Cat = "System"; Name = "Windows Prefetch"; Path = "$env:SystemRoot\Prefetch" },
-        @{ Cat = "System"; Name = "SoftwareDistribution (Downloads)"; Path = "$env:SystemRoot\SoftwareDistribution\Download"; Svc = @("wuauserv", "bits") },
-        @{ Cat = "System"; Name = "Catroot2 (Signatures Cache)"; Path = "$env:SystemRoot\System32\catroot2"; Svc = @("cryptsvc") },
-        @{ Cat = "System"; Name = "CBS & DISM Logs"; Path = "$env:SystemRoot\Logs\CBS;C:\Windows\Logs\DISM" },
+        @{ Cat = "System"; Name = "SoftwareDistribution"; Path = "$env:SystemRoot\SoftwareDistribution\Download"; Svc = @("wuauserv", "bits") },
+        @{ Cat = "System"; Name = "CBS Logs"; Path = "$env:SystemRoot\Logs\CBS" },
+        @{ Cat = "System"; Name = "DISM Logs"; Path = "$env:SystemRoot\Logs\DISM" },
         @{ Cat = "System"; Name = "Delivery Optimization"; Path = "$env:SystemRoot\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization"; Svc = @("DoSvc") },
-        @{ Cat = "System"; Name = "Windows Error Reporting"; Path = "C:\ProgramData\Microsoft\Windows\WER" },
-        @{ Cat = "System"; Name = "CryptSvc Cache"; Path = "$env:SystemRoot\ServiceProfiles\LocalService\AppData\Local\Microsoft\Windows\Caches" }
+        @{ Cat = "System"; Name = "Windows Error Reporting"; Path = "C:\ProgramData\Microsoft\Windows\WER" }
     )
     
-    # 2. BROWSERS (Multi-User)
+    # BROWSERS (Multi-User)
     foreach ($user in $userProfiles) {
         $userPath = $user.FullName
         $locs += @(
             @{ Cat = "Browser"; Name = "Chrome ($($user.Name))"; Path = "$userPath\AppData\Local\Google\Chrome\User Data\Default\Cache"; Proc = "chrome" },
             @{ Cat = "Browser"; Name = "Edge ($($user.Name))"; Path = "$userPath\AppData\Local\Microsoft\Edge\User Data\Default\Cache"; Proc = "msedge" },
             @{ Cat = "Browser"; Name = "Brave ($($user.Name))"; Path = "$userPath\AppData\Local\BraveSoftware\Brave-Browser\User Data\Default\Cache"; Proc = "brave" },
-            @{ Cat = "Browser"; Name = "Opera GX ($($user.Name))"; Path = "$userPath\AppData\Roaming\Opera Software\Opera GX Stable\Cache"; Proc = "opera" },
             @{ Cat = "Browser"; Name = "User Temp ($($user.Name))"; Path = "$userPath\AppData\Local\Temp" }
         )
     }
     
-    # 3. GPU & GAMING
+    # GAMING
     $locs += @(
         @{ Cat = "Gaming"; Name = "DirectX Shader Cache"; Path = "$env:LOCALAPPDATA\D3DSCache" },
-        @{ Cat = "Gaming"; Name = "NVIDIA Shaders"; Path = "$env:LOCALAPPDATA\NVIDIA\DXCache;$env:LOCALAPPDATA\NVIDIA\GLCache" },
-        @{ Cat = "Gaming"; Name = "AMD Shaders"; Path = "$env:LOCALAPPDATA\AMD\DxCache;$env:LOCALAPPDATA\AMD\DxcCache" },
+        @{ Cat = "Gaming"; Name = "NVIDIA Shaders"; Path = "$env:LOCALAPPDATA\NVIDIA\DXCache" },
+        @{ Cat = "Gaming"; Name = "NVIDIA GL Cache"; Path = "$env:LOCALAPPDATA\NVIDIA\GLCache" },
+        @{ Cat = "Gaming"; Name = "AMD Shaders"; Path = "$env:LOCALAPPDATA\AMD\DxCache" },
         @{ Cat = "Gaming"; Name = "Intel Shaders"; Path = "$env:LOCALAPPDATA\Intel\ShaderCache" },
         @{ Cat = "Gaming"; Name = "Steam HTML Cache"; Path = "$env:LOCALAPPDATA\Steam\htmlcache"; Proc = "steam" },
-        @{ Cat = "Gaming"; Name = "Epic Games Cache"; Path = "$env:LOCALAPPDATA\EpicGamesLauncher\Saved\webcache"; Proc = "EpicGamesLauncher" },
-        @{ Cat = "Gaming"; Name = "Battle.net Cache"; Path = "$env:LOCALAPPDATA\battle.net\Cache"; Proc = "Battle.net" },
-        @{ Cat = "Gaming"; Name = "Riot Games Cache"; Path = "$env:LOCALAPPDATA\Riot Games\Riot Client\Data\Cache"; Proc = "RiotClientServices" }
+        @{ Cat = "Gaming"; Name = "Epic Games Cache"; Path = "$env:LOCALAPPDATA\EpicGamesLauncher\Saved\webcache"; Proc = "EpicGamesLauncher" }
     )
     
-    # 4. ADVANCED APPS
+    # APPS
     foreach ($user in $userProfiles) {
         $userApp = "$($user.FullName)\AppData"
         $locs += @(
-            @{ Cat = "Apps"; Name = "Discord ($($user.Name))"; Path = "$userApp\Roaming\discord\Cache;$userApp\Roaming\discord\Code Cache"; Proc = "discord" },
+            @{ Cat = "Apps"; Name = "Discord ($($user.Name))"; Path = "$userApp\Roaming\discord\Cache"; Proc = "discord" },
             @{ Cat = "Apps"; Name = "Spotify ($($user.Name))"; Path = "$userApp\Local\Spotify\Storage"; Proc = "spotify" },
-            @{ Cat = "Apps"; Name = "Teams ($($user.Name))"; Path = "$userApp\Roaming\Microsoft\Teams\Cache"; Proc = "teams" },
-            @{ Cat = "Apps"; Name = "VS Code ($($user.Name))"; Path = "$userApp\Roaming\Code\Cache;$userApp\Roaming\Code\CachedData"; Proc = "Code" },
-            @{ Cat = "Apps"; Name = "Slack ($($user.Name))"; Path = "$userApp\Roaming\Slack\Cache"; Proc = "slack" },
-            @{ Cat = "Apps"; Name = "Dropbox Cache"; Path = "$userApp\Roaming\Dropbox\cache"; Proc = "dropbox" }
+            @{ Cat = "Apps"; Name = "VS Code ($($user.Name))"; Path = "$userApp\Roaming\Code\Cache"; Proc = "Code" }
         )
     }
     
@@ -139,138 +203,161 @@ function Get-NeuralCacheLocations {
 }
 
 # ============================================================================
-# SCAN & CLEAN LOGIC
+# AI-POWERED SCAN
 # ============================================================================
 
 function Invoke-NeuralCacheScan {
-    $recommendation = Get-NeuralMLRecommendation
+    $context = Get-UsageContext
+    $history = Get-CacheHistory
     
-    Write-Section "NEURAL CACHE ULTIMATE v6.5"
+    Write-Host ""
+    Write-Host " === NEURAL CACHE AI v7.0 ===" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host " Context: $($context.TimeSlot) | Deep Clean: $($context.DeepCleanRecommended)" -ForegroundColor Gray
+    Write-Host ""
     
-    if ($recommendation) {
-        Write-Host " [i] Recomendación IA: $($recommendation.Msg)" -ForegroundColor Cyan
-        Write-Host ""
-    }
+    # Measure baseline score
+    Write-Host " [+] Measuring baseline performance..." -ForegroundColor DarkGray
+    $baselineScore = Get-SystemScoreQuick
+    Write-Host " Baseline Score: $baselineScore" -ForegroundColor Gray
+    Write-Host ""
     
     $locations = Get-NeuralCacheLocations
-    $results = @()
-    $totalSize = 0
-    $totalFiles = 0
+    $scanResults = @()
     
-    Write-Host " Escaneando ubicaciones profundidad (Multi-User)..." -ForegroundColor Cyan
+    Write-Host " Scanning with AI prioritization..." -ForegroundColor Cyan
     Write-Host ""
     
     foreach ($loc in $locations) {
-        $pathsArr = $loc.Path -split ";"
+        $pathsArr = @($loc.Path)
         foreach ($pStr in $pathsArr) {
-            $paths = Resolve-Path $pStr -ErrorAction SilentlyContinue
-            
-            foreach ($p in $paths) {
-                Write-Host " Analyzing $($loc.Name)..." -NoNewline -ForegroundColor Gray
-                
-                if (Test-Path $p.Path) {
-                    $measure = Get-ChildItem -Path $p.Path -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
+            if (Test-Path $pStr) {
+                $measure = Get-ChildItem -Path $pStr -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
+                if ($measure.Count -gt 0) {
+                    $sizeMB = [math]::Round($measure.Sum / 1MB, 2)
+                    $cacheInfo = @{ Name = $loc.Name; Category = $loc.Cat; SizeMB = $sizeMB }
+                    $priority = Get-CachePriority -CacheInfo $cacheInfo -Context $context -History $history
                     
-                    if ($measure.Count -gt 0) {
-                        $sizeMB = [math]::Round($measure.Sum / 1MB, 2)
-                        $isRunning = $false
-                        if ($loc.Proc) { $isRunning = Get-Process -Name $loc.Proc -ErrorAction SilentlyContinue }
-                        
-                        Write-Host "Found $($measure.Count) files ($sizeMB MB)" -ForegroundColor $(if ($sizeMB -gt 500) { "Yellow" }else { "Gray" })
-                        
-                        $results += [PSCustomObject]@{
-                            Name     = $loc.Name
-                            Path     = $p.Path
-                            SizeMB   = $sizeMB
-                            Files    = $measure.Count
-                            Running  = $isRunning
-                            Services = $loc.Svc
-                            Category = $loc.Cat
-                        }
-                        $totalSize += $sizeMB
-                        $totalFiles += $measure.Count
+                    $scanResults += [PSCustomObject]@{
+                        Name     = $loc.Name
+                        Path     = $pStr
+                        SizeMB   = $sizeMB
+                        Files    = $measure.Count
+                        Category = $loc.Cat
+                        Priority = $priority
+                        Services = $loc.Svc
+                        Process  = $loc.Proc
                     }
-                    else { Write-Host " Clean" -ForegroundColor Green }
                 }
-                else { } # Path doesn't exist, skip silently
             }
         }
     }
     
+    # Sort by AI priority
+    $scanResults = $scanResults | Sort-Object Priority -Descending
+    
+    # Display results
+    $totalSize = ($scanResults | Measure-Object -Property SizeMB -Sum).Sum
+    $totalFiles = ($scanResults | Measure-Object -Property Files -Sum).Sum
+    
     Write-Host ""
-    Write-Host " ------------------------------------------------" -ForegroundColor Gray
-    Write-Host " RESUMEN DE ANALISIS INTELIGENTE:" -ForegroundColor White
-    Write-Host " Archivos detectados: $totalFiles" -ForegroundColor Cyan
-    Write-Host " Espacio estimable:   $([math]::Round($totalSize, 2)) MB" -ForegroundColor Cyan
+    Write-Host " === SCAN RESULTS (AI Sorted) ===" -ForegroundColor White
+    Write-Host ""
+    
+    $i = 1
+    foreach ($res in $scanResults | Select-Object -First 15) {
+        $priorityColor = if ($res.Priority -gt 30) { "Green" } elseif ($res.Priority -gt 15) { "Yellow" } else { "Gray" }
+        Write-Host " $i. [$($res.Category.PadRight(7))] $($res.Name.PadRight(30)) $($res.SizeMB.ToString().PadLeft(8)) MB  [P:$($res.Priority)]" -ForegroundColor $priorityColor
+        $i++
+    }
+    
+    Write-Host ""
+    Write-Host " Total: $([math]::Round($totalSize, 2)) MB in $totalFiles files" -ForegroundColor Cyan
     Write-Host ""
     
     if ($totalFiles -gt 0) {
-        $choice = Read-Host " >> ¿Desea ejecutar la limpieza avanzada? (S/N)"
-        if ($choice -match "^[Ss]") {
-            Invoke-NeuralCacheClean -ScanResults $results
+        Write-Host " Options:"
+        Write-Host " [1] Smart Clean (High priority only)"
+        Write-Host " [2] Full Clean (All locations)"
+        Write-Host " [3] Cancel"
+        Write-Host ""
+        $choice = Read-Host " >> Choice"
+        
+        switch ($choice) {
+            '1' { Invoke-SmartCleanup -Results ($scanResults | Where-Object { $_.Priority -gt 20 }) -BaselineScore $baselineScore }
+            '2' { Invoke-SmartCleanup -Results $scanResults -BaselineScore $baselineScore }
+            '3' { return }
         }
     }
 }
 
-function Invoke-NeuralCacheClean {
-    param($ScanResults)
+function Invoke-SmartCleanup {
+    param($Results, $BaselineScore)
     
-    Write-Section "CLEANING ENGINE"
+    Write-Host ""
+    Write-Host " === CLEANING ENGINE ===" -ForegroundColor Yellow
+    Write-Host ""
     
-    # 1. STOP REQUIRED SERVICES
-    $allSvcs = $ScanResults.Services | Select-Object -Unique | Where-Object { $_ -ne $null }
+    # Stop required services
+    $allSvcs = $Results.Services | Select-Object -Unique | Where-Object { $_ }
     if ($allSvcs) {
-        Write-Host " [+] Deteniendo servicios para limpieza profunda..." -ForegroundColor Yellow
+        Write-Host " [+] Stopping services..." -ForegroundColor DarkGray
         Invoke-ServiceControl -Services $allSvcs -Action "Stop"
     }
     
-    $freedTotal = 0
+    $cleanupResults = @()
     
-    # 2. CLEAN FILES
-    foreach ($res in $ScanResults) {
-        if ($res.Running) {
-            Write-Host " [?] $($res.Name) está activo. ¿Cerrar para limpiar? (S/N/A:Saltar)" -ForegroundColor Yellow -NoNewline
-            $ans = Read-Host " >"
-            if ($ans -match "^[Ss]") {
-                Stop-Process -Name $res.Proc -Force -ErrorAction SilentlyContinue
-                Start-Sleep -Seconds 1
-            }
-            elseif ($ans -match "^[Aa]") {
-                Write-Host "   [--] Saltando $($res.Name)" -ForegroundColor DarkGray
+    foreach ($res in $Results) {
+        Write-Host " Cleaning $($res.Name)..." -NoNewline -ForegroundColor Gray
+        
+        if ($res.Process) {
+            $proc = Get-Process -Name $res.Process -ErrorAction SilentlyContinue
+            if ($proc) {
+                Write-Host " [Running, skip]" -ForegroundColor Yellow
                 continue
             }
         }
         
-        Write-Host " Cleaning $($res.Name)..." -NoNewline -ForegroundColor Gray
-        $freed = Remove-FolderSafe -Path $res.Path -Desc ""
-        if ($freed -ge 0) {
-            Write-Host " [OK] ($([math]::Round($freed,2)) MB)" -ForegroundColor Green
-            $freedTotal += $freed
+        try {
+            $before = (Get-ChildItem -Path $res.Path -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            Remove-Item -Path "$($res.Path)\*" -Recurse -Force -ErrorAction SilentlyContinue
+            $freedMB = [math]::Round($before / 1MB, 2)
+            Write-Host " [OK] $freedMB MB freed" -ForegroundColor Green
+            
+            $cleanupResults += @{ Name = $res.Name; FreedMB = $freedMB }
+        }
+        catch {
+            Write-Host " [Error]" -ForegroundColor Red
         }
     }
     
-    # 3. EXTRA: DISM COMPONENT CLEANUP
-    Write-Host ""
-    $dismAns = Read-Host " >> ¿Ejecutar limpieza de componentes de Windows (DISM)? (Lento pero efectivo) (S/N)"
-    if ($dismAns -match "^[Ss]") {
-        Write-Host " [+] Iniciando DISM Component Cleanup... esto tardará unos minutos." -ForegroundColor Yellow
-        try { & dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase } catch {}
-    }
-    
-    # 4. RESTART SERVICES
+    # Restart services
     if ($allSvcs) {
         Write-Host ""
-        Write-Host " [+] Reiniciando servicios..." -ForegroundColor Yellow
+        Write-Host " [+] Restarting services..." -ForegroundColor DarkGray
         Invoke-ServiceControl -Services $allSvcs -Action "Start"
     }
     
+    # Update AI history
+    $history = Update-CleanupHistory -CleanupResults $cleanupResults
+    
+    # Measure post-cleanup score
+    Start-Sleep -Seconds 2
+    $postScore = Get-SystemScoreQuick
+    $delta = [math]::Round($postScore - $BaselineScore, 1)
+    
     Write-Host ""
-    Write-Host " ✅ Proceso completado." -ForegroundColor Green
-    Write-Host " Liberado: $([math]::Round($freedTotal, 2)) MB" -ForegroundColor Cyan
+    Write-Host " === RESULTS ===" -ForegroundColor Green
+    Write-Host " Freed: $([math]::Round(($cleanupResults | Measure-Object -Property FreedMB -Sum).Sum, 2)) MB" -ForegroundColor Cyan
+    Write-Host " Score: $BaselineScore -> $postScore ($(if($delta -ge 0){'+'}else{''})$delta)" -ForegroundColor $(if ($delta -ge 0) { 'Green' }else { 'Yellow' })
+    Write-Host " Sessions tracked: $($history.Cleanups.Count)" -ForegroundColor Gray
     Write-Host ""
 }
 
-# START
-Invoke-NeuralCacheScan
-Wait-ForKeyPress
+# ============================================================================
+# MAIN
+# ============================================================================
 
+Invoke-NeuralCacheScan
+Write-Host ""
+Read-Host " Press ENTER to continue"

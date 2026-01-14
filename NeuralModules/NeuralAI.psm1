@@ -81,7 +81,15 @@ $Script:TweakLibrary = @(
     @{ Id = "HungAppTimeout"; Name = "Hung App Timeout"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "HungAppTimeout"; ValueOn = "1000"; ValueOff = "5000"; Description = "Faster hung app detection" },
     
     # Privacy/Telemetry (from Win11Debloat)
-    @{ Id = "Telemetry"; Name = "Disable Telemetry"; Risk = "Medium"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "AllowTelemetry"; ValueOn = 0; ValueOff = 3; Description = "Disable data collection" }
+    @{ Id = "Telemetry"; Name = "Disable Telemetry"; Risk = "Medium"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "AllowTelemetry"; ValueOn = 0; ValueOff = 3; Description = "Disable data collection" },
+    
+    # === LENOVO-SPECIFIC TWEAKS ===
+    # These are only applied on Lenovo systems (condition checked at runtime)
+    @{ Id = "LenovoHybrid"; Name = "Lenovo Hybrid Mode (dGPU)"; Risk = "Medium"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "HybridMode"; WmiValueOn = "Disable"; WmiValueOff = "Enable"; Description = "Force dedicated GPU for gaming" },
+    @{ Id = "LenovoPerf"; Name = "Lenovo Max Performance"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "AdaptiveThermalManagementAC"; WmiValueOn = "MaximizePerformance"; WmiValueOff = "Balanced"; Description = "Maximum thermal on AC" },
+    @{ Id = "LenovoOverDrive"; Name = "Lenovo LCD OverDrive"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "OverDriveMode"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Faster LCD response time" },
+    @{ Id = "LenovoGPUOC"; Name = "Lenovo GPU Overclock"; Risk = "Medium"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "GPUOverclock"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Enable GPU boost mode" },
+    @{ Id = "LenovoCharge"; Name = "Lenovo Battery Conservation"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "BatteryConservationMode"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Limit charge to 60% for longevity" }
 )
 
 # Persistent State Management
@@ -272,15 +280,47 @@ function Invoke-Tweak {
     param([string]$TweakId, [switch]$Apply, [switch]$Revert)
     $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $TweakId }
     if (-not $tweak) { Write-Host "   [!] Tweak not found: $TweakId" -ForegroundColor Red; return $false }
+    
+    # Check condition if present
+    if ($tweak.ConditionScript) {
+        try {
+            $canApply = Invoke-Expression $tweak.ConditionScript
+            if (-not $canApply) {
+                Write-Host "   [i] Skipping $TweakId (condition not met)" -ForegroundColor DarkGray
+                return $false
+            }
+        }
+        catch { return $false }
+    }
+    
     $value = if ($Apply) { $tweak.ValueOn } else { $tweak.ValueOff }
     $command = if ($Apply) { $tweak.CommandOn } else { $tweak.CommandOff }
+    $wmiValue = if ($Apply) { $tweak.WmiValueOn } else { $tweak.WmiValueOff }
+    
     try {
-        if ($tweak.Path) {
+        if ($tweak.WmiSetting) {
+            # Lenovo WMI-based tweak
+            $setBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SetBiosSetting -ErrorAction Stop
+            $setResult = $setBios | Invoke-CimMethod -MethodName SetBiosSetting -Arguments @{ parameter = "$($tweak.WmiSetting),$wmiValue" }
+            if ($setResult.return -eq "Success") {
+                $saveBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SaveBiosSettings -ErrorAction Stop
+                $saveBios | Invoke-CimMethod -MethodName SaveBiosSettings -Arguments @{ parameter = "" } | Out-Null
+                return $true
+            }
+            return $false
+        }
+        elseif ($tweak.Path) {
+            # Registry-based tweak
             if (-not (Test-Path $tweak.Path)) { New-Item -Path $tweak.Path -Force | Out-Null }
             Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $value -Force
+            return $true
         }
-        elseif ($command) { Invoke-Expression $command 2>&1 | Out-Null }
-        return $true
+        elseif ($command) {
+            # Command-based tweak
+            Invoke-Expression $command 2>&1 | Out-Null
+            return $true
+        }
+        return $false
     }
     catch { Write-Host "   [!] Failed: $_" -ForegroundColor Red; return $false }
 }
