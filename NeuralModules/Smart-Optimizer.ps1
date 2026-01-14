@@ -622,15 +622,7 @@ function Invoke-ServiceOptimizations {
     param($hw)
     Write-Step "OPTIMIZACION DE SERVICIOS INTELIGENTE"
     
-    $servicesToDisable = @(
-        "DiagTrack",          # Telemetry
-        "dmwappushservice",   # WAP Push (Telemetry)
-        "MapsBroker",         # Downloaded Maps Manager
-        "RetailDemo",         # Retail Demo Service
-        "WalletService",      # Wallet Service
-        "XblGameSave",        # Xbox Game Save (Only if user doesn't game? No, keep safe, disabling interferes with GamePass)
-        "XboxNetApiSvc"       # Xbox Live Networking (Keep safe)
-    )
+    Write-Step "OPTIMIZACION DE SERVICIOS INTELIGENTE"
     
     # Safe bloat removal list
     $bloatServices = @("RetailDemo", "MapsBroker", "WalletService")
