@@ -12,6 +12,13 @@ function Invoke-PowerPlanCreation {
     $guidIdleDisable = "5d76a2ca-e8c0-402f-a133-2158492d58ad" # Idle Disable
     $guidPerfBoost = "be337238-0d82-4146-a960-4f3749d470c7" # Perf Boost Mode
     
+    # Advanced Hidden GUIDs (Research)
+    $guidHeteroPolicy = "93b8b6dc-0698-4d1c-9ee4-0644e900c85d" # Heterogeneous Thread Scheduling Policy
+    $guidShortSched = "bae08b81-2d5e-4688-ad6a-13243af89a51" # Short Scheduling Policy
+    $guidEPP = "36687f9e-e3a5-4dbf-b1dc-15eb381c6863" # Energy Performance Preference
+    $guidIdleDemote = "4b92d758-5a24-4851-a470-815d78aee119" # Idle Demote Threshold
+    $guidIdlePromote = "7b224883-b3cc-4d79-819f-8374152cbe7c" # Idle Promote Threshold
+
     # Check existing plans
     $plans = powercfg /list
     
@@ -38,12 +45,24 @@ function Invoke-PowerPlanCreation {
             # We treat "Low Latency" as eSports mode.
             powercfg -setacvalueindex $newGuid $subProc $guidIdleDisable 1
             
+            # Advanced: EPP 0 (Max Perf)
+            powercfg -setacvalueindex $newGuid $subProc $guidEPP 0
+            
+            # Advanced: Heterogeneous Policy 0 (All Processors) or 2 (Prefer Performant)
+            # For Gaming, Prefer Performant (2) avoids E-cores for main threads
+            powercfg -setacvalueindex $newGuid $subProc $guidHeteroPolicy 2
+            powercfg -setacvalueindex $newGuid $subProc $guidShortSched 2
+            
+            # Advanced: C-States Thresholds (100% = Disable Demotion to deeper sleep)
+            powercfg -setacvalueindex $newGuid $subProc $guidIdleDemote 100
+            powercfg -setacvalueindex $newGuid $subProc $guidIdlePromote 100
+            
             # USB/PCI OFF
             $guidUsbSub = "2a737441-1930-4402-8d77-b94982726d37"
             $guidUsbSel = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
             powercfg -setacvalueindex $newGuid $guidUsbSub $guidUsbSel 0 # Disabled
             
-            Write-Host "   [OK] Plan '$planName' configurado (Aggressive Turbo, No Parking)" -ForegroundColor Green
+            Write-Host "   [OK] Plan '$planName' configurado (Aggressive Turbo, No Parking, EPP 0, P-Cores Preferred)" -ForegroundColor Green
         }
     }
     else {
@@ -65,11 +84,17 @@ function Invoke-PowerPlanCreation {
             # Turbo Boost: Efficient Aggressive (4)
             powercfg -setacvalueindex $newGuid $subProc $guidPerfBoost 4
             
-            Write-Host "   [OK] Plan '$planName' configurado (Efficient Turbo)" -ForegroundColor Green
+            # Advanced: EPP 50 (Balanced)
+            powercfg -setacvalueindex $newGuid $subProc $guidEPP 50
+            
+            # Advanced: Auto Scheduling
+            powercfg -setacvalueindex $newGuid $subProc $guidHeteroPolicy 5
+            
+            Write-Host "   [OK] Plan '$planName' configurado (Efficient Turbo, EPP 50)" -ForegroundColor Green
         }
     }
 
-    # --- 3. NEURAL STREAMING (Stable) ---
+    # --- 3. NEURAL STREAMING (Workstation) ---
     $planName = "Neural Streaming"
     if ($plans -notmatch $planName) {
         Write-Host "   [+] Creando plan: $planName..." -ForegroundColor Cyan
@@ -86,8 +111,15 @@ function Invoke-PowerPlanCreation {
             # Turbo Boost: Efficient Aggressive (4) or Disabled (0) for stability? 
             # Streaming needs stability. Let's start with Efficient Enabled (3)
             powercfg -setacvalueindex $newGuid $subProc $guidPerfBoost 3
+             
+            # Advanced: EPP 15 (High Perf but not crazy)
+            powercfg -setacvalueindex $newGuid $subProc $guidEPP 15
+             
+            # Advanced: Hetero Policy 0 (All Processors) - Encoders need everything
+            powercfg -setacvalueindex $newGuid $subProc $guidHeteroPolicy 0
+            powercfg -setacvalueindex $newGuid $subProc $guidShortSched 0
             
-            Write-Host "   [OK] Plan '$planName' configurado (Stable Turbo, Unparked)" -ForegroundColor Green
+            Write-Host "   [OK] Plan '$planName' configurado (Stable Turbo, Unparked, All Cores)" -ForegroundColor Green
         }
     }
 }
