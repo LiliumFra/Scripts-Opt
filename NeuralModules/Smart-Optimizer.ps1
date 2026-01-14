@@ -653,7 +653,16 @@ function Invoke-SmartOptimization {
     Invoke-GPUOptimizations $hw
     Invoke-NetworkOptimizations $hw
     Invoke-VisualOptimizations $hw
-    Invoke-ProcessOptimizations $hw
+    # Invoke-PowerOptimizations $hw # Deprecated in favor of Neural Power Plans
+    
+    # Create/Ensure Plans exist
+    Invoke-PowerPlanCreation
+    
+    # Apply based on tier/profile context
+    # Assuming $hw.PerformanceTier maps to profiles. We might need a specific 'Profile' param in the future.
+    # For now: High/Ultra -> Low Latency. Standard -> Balanced.
+    Set-NeuralPowerPlan -ProfileName $hw.PerformanceTier 
+    
     Invoke-InputLatencyOptimizations $hw
     Invoke-AudioLatencyOptimizations $hw
     Invoke-GamingOptimizations $hw
