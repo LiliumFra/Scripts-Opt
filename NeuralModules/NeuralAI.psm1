@@ -213,15 +213,48 @@ function Measure-SystemMetrics {
     return [PSCustomObject]$metrics
 }
 
+# Deep Learning: Load State Detection
+function Get-SystemLoadState {
+    try {
+        $cpu = (Get-Counter "\Processor(_Total)\% Processor Time" -MaxSamples 2 -SampleInterval 1 -ErrorAction SilentlyContinue).CounterSamples.CookedValue | Measure-Object -Average | Select-Object -ExpandProperty Average
+        $disk = (Get-Counter "\PhysicalDisk(_Total)\% Disk Time" -MaxSamples 2 -SampleInterval 1 -ErrorAction SilentlyContinue).CounterSamples.CookedValue | Measure-Object -Average | Select-Object -ExpandProperty Average
+        
+        # Simple heuristic for User Presence (could be expanded)
+        # For now, we assume user is active if script is running interactively
+        
+        if ($cpu -lt 10 -and $disk -lt 10) { return "Idle" }
+        if ($cpu -gt 80 -or $disk -gt 90) { return "Thrashing" }
+        if ($cpu -gt 40) { return "Heavy" }
+        return "Light"
+    }
+    catch { return "General" }
+}
+
 function Get-CompositeScore {
     param($Metrics)
     $score = 100
-    if ($Metrics.DpcTime -gt 1) { $score -= ($Metrics.DpcTime - 1) * 5 }
-    if ($Metrics.InterruptTime -gt 1) { $score -= ($Metrics.InterruptTime - 1) * 3 }
-    if ($Metrics.ContextSwitch -gt 5000) { $score -= [math]::Min(20, ($Metrics.ContextSwitch - 5000) / 500) }
-    if ($Metrics.DiskQueue -gt 2) { $score -= ($Metrics.DiskQueue - 2) * 3 }
-    if ($Metrics.NetworkPing -gt 20) { $score -= [math]::Min(10, ($Metrics.NetworkPing - 20) / 10) }
-    if ($Metrics.CpuTemp -gt 75) { $score -= ($Metrics.CpuTemp - 75) * 2 }
+    
+    # Non-linear Multi-dimensional Penalties
+    
+    # 1. Latency Penalty (Exponential decay)
+    if ($Metrics.DpcTime -gt 0.5) { $score -= [math]::Pow($Metrics.DpcTime * 2, 1.5) } 
+    if ($Metrics.InterruptTime -gt 0.5) { $score -= [math]::Pow($Metrics.InterruptTime * 2, 1.5) }
+    
+    # 2. Stability Penalty (Context Switching)
+    if ($Metrics.ContextSwitch -gt 3000) { 
+        $delta = $Metrics.ContextSwitch - 3000
+        $score -= [math]::Log($delta) * 5 # Logarithmic penalty for massive switching
+    }
+    
+    # 3. I/O BottleNeck
+    if ($Metrics.DiskQueue -gt 1) { $score -= ($Metrics.DiskQueue * 4) }
+    
+    # 4. Network Jitter Proxy (Ping)
+    if ($Metrics.NetworkPing -gt 30) { $score -= ($Metrics.NetworkPing - 30) / 5 }
+    
+    # 5. Thermal Throttle Risk
+    if ($Metrics.CpuTemp -gt 80) { $score -= ($Metrics.CpuTemp - 80) * 3 } # Aggressive thermal penalty
+    
     return [math]::Max(0, [math]::Min(100, [math]::Round($score, 2)))
 }
 
@@ -237,7 +270,10 @@ function Get-CurrentState {
     }
     $tier = if ($Hardware.PerformanceTier) { $Hardware.PerformanceTier } else { "Standard" }
     $work = if ($Workload) { $Workload } else { "General" }
-    return "$tier|$work|$timeSlot"
+    $load = Get-SystemLoadState
+    
+    # Deep State: Tier|Workload|Time|Load
+    return "$tier|$work|$timeSlot|$load"
 }
 
 function Get-AvailableActions {
@@ -345,12 +381,15 @@ function Invoke-Tweak {
 function Invoke-NeuralLearning {
     param([string]$ProfileName, [object]$Hardware, [string]$Workload = "General")
     
-    Write-Section "NEURAL Q-LEARNING CYCLE v2.0"
+    Write-Section "NEURAL Q-LEARNING CYCLE v2.0 (DEEP LEARNING)"
     
     $config = Get-NeuralConfig
     $qTable = Get-QTable
     $brain = Get-NeuralBrain
     $epsilon = if ($config.Epsilon) { $config.Epsilon } else { $Script:QLearningConfig.EpsilonInitial }
+    
+    # Deep Learning: Consolidate Long-Term Memory
+    Update-PersistenceRewards -QTable $qTable
     
     $state = Get-CurrentState -Hardware $Hardware -Workload $Workload
     Write-Host "   [STATE] $state" -ForegroundColor Gray
@@ -469,14 +508,14 @@ function Get-BestTweaksForState {
     if ($qTable.ContainsKey($state)) {
         $stateActions = $qTable[$state]
         $stateActions.GetEnumerator() | Where-Object { $_.Value -gt 0 } | Sort-Object Value -Descending | Select-Object -First $TopN | ForEach-Object {
-            $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $_.Name }
+            $tweakObj = $Script:TweakLibrary | Where-Object { $_.Id -eq $Name }
             $recommendations += [PSCustomObject]@{
                 TweakId     = $_.Name
-                Name        = if ($tweak) { $tweak.Name } else { $_.Name }
-                Category    = if ($tweak) { $tweak.Category } else { "Unknown" }
+                Name        = if ($tweakObj) { $tweakObj.Name } else { $_.Name }
+                Category    = if ($tweakObj) { $tweakObj.Category } else { "Unknown" }
                 QValue      = [math]::Round($_.Value, 3)
-                Risk        = if ($tweak) { $tweak.Risk } else { "Unknown" }
-                Description = if ($tweak) { $tweak.Description } else { "" }
+                Risk        = if ($tweakObj) { $tweakObj.Risk } else { "Unknown" }
+                Description = if ($tweakObj) { $tweakObj.Description } else { "" }
             }
         }
     }
@@ -489,6 +528,35 @@ function Invoke-ExploratoryTweak {
     Write-Host "   [AI] Run Invoke-NeuralLearning for adaptive exploration" -ForegroundColor Gray
 }
 
+function Update-PersistenceRewards {
+    param($QTable)
+    
+    $brain = Get-NeuralBrain
+    if (-not $brain.History) { return }
+    
+    # 1. Identify successful actions from 24h+ ago
+    $cutoff = (Get-Date).AddHours(-48) # Look back 2 days
+    $longTermSuccess = $brain.History | Where-Object { 
+        $_.Reward -gt 0 -and 
+        ([DateTime]$_.Timestamp) -gt $cutoff 
+    }
+    
+    foreach ($record in $longTermSuccess) {
+        # 2. Reinforce the Q-Value slightly (Memory Consolidation)
+        $state = $record.State
+        $action = $record.Action
+        
+        # If Q-Table still has this state/action pair
+        if ($QTable.ContainsKey($state) -and $QTable[$state].ContainsKey($action)) {
+            $currentQ = $QTable[$state][$action]
+            # Small reinforcement (0.01) to solidify "good habits"
+            $newQ = $currentQ + 0.01 
+            Set-QValue -QTable $QTable -State $state -Action $action -Value $newQ
+        }
+    }
+    Write-Host "   [AI] Long-Term Memory Consolidated ($($longTermSuccess.Count) records processed)" -ForegroundColor DarkGray
+}
+
 Export-ModuleMember -Function @(
     'Invoke-NeuralLearning',
     'Get-NeuralRecommendation', 
@@ -496,5 +564,7 @@ Export-ModuleMember -Function @(
     'Measure-SystemMetrics',
     'Get-BestTweaksForState',
     'Get-QTable',
-    'Invoke-ExploratoryTweak'
+    'Invoke-ExploratoryTweak',
+    'Get-SystemLoadState',
+    'Update-PersistenceRewards'
 )
