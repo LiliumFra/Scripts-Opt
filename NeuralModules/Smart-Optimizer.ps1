@@ -648,6 +648,34 @@ function Invoke-SmartOptimization {
     
     Write-Host ""
     Write-Section "APLICANDO OPTIMIZACIONES INTELIGENTES"
+
+    # --- AI DECISION LOGIC REPORT ---
+    Write-Host " [IA] Decidiendo configuracion optima..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    # 1. Power Plan Decision
+    $planTarget = "Neural Balanced"
+    if ($hw.PerformanceTier -match "Ultra|High") { $planTarget = "Neural Low Latency" }
+    elseif ($hw.PerformanceTier -eq "Streaming") { $planTarget = "Neural Streaming" }
+    Write-Host "   > Perfil: $($hw.PerformanceTier) -> Plan: $planTarget" -ForegroundColor Green
+    
+    # 2. Kernel/Latency Decision
+    if ($hw.PerformanceTier -in "High", "Ultra", "Standard") {
+        Write-Host "   > Kernel: BCD/Timers optimizados para baja latencia." -ForegroundColor Green
+    }
+    
+    # 3. CPU Mitigation Decision
+    if ($hw.IsOldCpu) {
+        Write-Host "   > CPU Legacy ($($hw.CpuGen)): Mitigaciones marcadas para revision." -ForegroundColor Yellow
+    }
+    
+    # 4. Storage Decision
+    if ($hw.IsNVMe) {
+        Write-Host "   > Storage: NVMe detectado -> Optimizacion Maxima I/O." -ForegroundColor Green
+    }
+    
+    Write-Host ""
+    # --------------------------------
     
     # Apply all hardware-aware optimizations
     Invoke-StorageOptimizations $hw
