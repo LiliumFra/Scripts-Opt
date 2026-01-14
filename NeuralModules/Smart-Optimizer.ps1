@@ -243,6 +243,16 @@ function Invoke-MemoryOptimizations {
         
         # System Responsiveness for gaming/streaming
         Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "SystemResponsiveness" -Value 0 -Desc "System Responsiveness: 0%"
+        
+        # Disable Memory Compression (MmAgent) to reduce CPU overhead
+        Write-Host "   [i] Desactivando compresion de memoria (Reduce uso de CPU)..." -ForegroundColor Cyan
+        try {
+            Disable-MMAgent -mc -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Compresion de Memoria: OFF" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "   [!] Error ajustando MmAgent: $_" -ForegroundColor DarkGray
+        }
     }
     elseif ($hw.RamGB -ge 6) {
         Write-Host "   [i] RAM Media (6-16GB) - Optimizaciones balanceadas..." -ForegroundColor Yellow
@@ -448,6 +458,49 @@ function Invoke-InputLatencyOptimizations {
     Write-Host "   [OK] Latencia de entrada optimizada" -ForegroundColor Green
 }
 
+function Invoke-KernelTweaks {
+    param($hw)
+    Write-Step "OPTIMIZACION DE KERNEL & BOOT (LATENCIA)"
+    
+    # Only apply on High/Ultra tier to avoid stability risks on very old hardware
+    if ($hw.PerformanceTier -in "High", "Ultra", "Standard") {
+        Write-Host "   [i] Optimizando temporizadores del sistema (BCD)..." -ForegroundColor Cyan
+        
+        # 1. Disable Dynamic Tick (Reduces micro-stutters/latency)
+        cmd /c "bcdedit /set disabledynamictick yes" | Out-Null
+        
+        # 2. Ensure HPET is OFF (Delete useplatformclock to force default TSC)
+        cmd /c "bcdedit /deletevalue useplatformclock" 2>$null | Out-Null
+        
+        # 3. TSC Sync Policy (Enhanced is safest/best for modern CPUs)
+        cmd /c "bcdedit /set tscsyncpolicy Enhanced" | Out-Null
+        
+        Write-Host "   [OK] Timers ajustados (DynamicTick: OFF, HPET: Default)" -ForegroundColor Green
+    }
+}
+
+function Invoke-UsbPowerOptimizations {
+    param($hw)
+    Write-Step "OPTIMIZACION DE ENERGIA USB"
+    
+    # Disable USB Selective Suspend (prevents HID wake-up lag)
+    # 2a737441-1930-4402-8d77-b94982726d37 = USB settings
+    # 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 = USB Selective Suspend Setting
+    # 0 = Disabled
+    
+    $currentScheme = Get-CimInstance Win32_PowerPlan -Namespace root\cimv2\power -Filter "IsActive='True'"
+    
+    # Apply to current scheme
+    if ($currentScheme) {
+        $guid = $currentScheme.InstanceID -replace ".*{(.*)}", '$1'
+        cmd /c "powercfg /setacvalueindex $guid 2a737441-1930-4402-8d77-b94982726d37 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0" | Out-Null
+        cmd /c "powercfg /setdcvalueindex $guid 2a737441-1930-4402-8d77-b94982726d37 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0" | Out-Null
+        cmd /c "powercfg /active $guid" | Out-Null # Refresh
+        
+        Write-Host "   [OK] Suspension Selectiva USB: Deshabilitada" -ForegroundColor Green
+    }
+}
+
 function Invoke-NetworkOptimizations {
     param($hw)
     
@@ -605,6 +658,8 @@ function Invoke-SmartOptimization {
     Invoke-AudioLatencyOptimizations $hw
     Invoke-GamingOptimizations $hw
     Invoke-CpuMitigationToggles $hw
+    Invoke-UsbPowerOptimizations $hw
+    Invoke-KernelTweaks $hw
     
     # Summary
     Write-Host ""

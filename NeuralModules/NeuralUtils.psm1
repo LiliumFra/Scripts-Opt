@@ -487,7 +487,7 @@ function Get-HardwareProfile {
             Set-RegistryKey -Path $msiPath -Name "MSISupported" -Value 1 -Type DWord -Desc "Enable MSI Mode for $DeviceDesc"
         }
         catch {
-            Write-Log "Failed to set MSI mode for $DeviceDesc: $_" "Error"
+            Write-Log "Failed to set MSI mode for $($DeviceDesc): $_" "Error"
         }
     }
     
@@ -628,8 +628,8 @@ function New-SystemRestorePoint {
         }
 
         # Check if System Restore is enabled for System Drive
-        $sysDrive = $env:SystemDrive
-        $status = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
+        # Variables removed to fix PSScriptAnalyzer warnings
+        Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Out-Null
         
         # Simple check: try to create
         Write-Host " [+] $(Msg 'Utils.Restore.Creating' $Description)" -ForegroundColor Cyan
