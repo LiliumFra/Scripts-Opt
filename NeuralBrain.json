@@ -1,4 +1,4 @@
-{
+﻿{
     "History":  [
                     {
                         "Metrics":  {
@@ -36,6 +36,33 @@
                         "Profile":  "Neural Low Latency",
                         "Tier":  "High",
                         "Score":  50
+                    },
+                    {
+                        "Metrics":  {
+                                        "ContextSwitch":  0,
+                                        "DpcTime":  0,
+                                        "DiskQueue":  0,
+                                        "NetworkPing":  30,
+                                        "CpuTemp":  55.1,
+                                        "Timestamp":  {
+                                                          "value":  "\/Date(1768400960624)\/",
+                                                          "DisplayHint":  2,
+                                                          "DateTime":  "miércoles, 14 de enero de 2026 11:29:20"
+                                                      },
+                                        "Score":  99,
+                                        "GpuUsage":  0,
+                                        "InterruptTime":  0
+                                    },
+                        "BaselineScore":  99,
+                        "Action":  "FSO",
+                        "Profile":  "Dashboard Quick Learn",
+                        "State":  "High|General|Morning",
+                        "Timestamp":  "2026-01-14 11:29:24",
+                        "Workload":  "General",
+                        "Tier":  "High",
+                        "Reward":  0,
+                        "Hardware":  "11th Gen Intel(R) Core(TM) i7-11370H @ 3.30GHz",
+                        "FinalScore":  99
                     }
                 ]
 }

@@ -155,3 +155,5 @@ function Set-NeuralPowerPlan {
         Write-Host "   [!] Plan '$targetName' no encontrado. Usando default." -ForegroundColor Yellow
     }
 }
+
+Export-ModuleMember -Function Invoke-PowerPlanCreation, Set-NeuralPowerPlan
