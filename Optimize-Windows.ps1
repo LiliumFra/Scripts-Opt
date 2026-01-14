@@ -204,6 +204,14 @@ function Show-Banner {
     Write-Host ""
     Write-Host " System: $($hw.CpuVendor) | RAM: $($hw.RamGB)GB | GPU: $($hw.GpuName)" -ForegroundColor DarkGray
     Write-Host " Lang:   $($global:NeuralLang) (Auto-Detected)" -ForegroundColor DarkGray
+    
+    # AI Stats Overlay
+    if (Get-Command "Get-NeuralConfig" -ErrorAction SilentlyContinue) {
+        $aiConf = Get-NeuralConfig
+        $cycles = if ($aiConf.LearningCycles) { $aiConf.LearningCycles } else { 0 }
+        $eps = if ($aiConf.Epsilon) { [math]::Round($aiConf.Epsilon * 100, 0) } else { 50 }
+        Write-Host " AI Brain: $cycles Cycles | Exp: $eps% | Active" -ForegroundColor Magenta
+    }
     Write-Host ""
 }
 

@@ -557,6 +557,29 @@ function Update-PersistenceRewards {
     Write-Host "   [AI] Long-Term Memory Consolidated ($($longTermSuccess.Count) records processed)" -ForegroundColor DarkGray
 }
 
+function Set-UserFeedback {
+    param([int]$Reward)
+    
+    $brain = Get-NeuralBrain
+    $qTable = Get-QTable
+    
+    if ($brain.History.Count -gt 0) {
+        $lastAction = $brain.History | Select-Object -Last 1
+        $state = $lastAction.State
+        $action = $lastAction.Action
+        
+        if ($QTable.ContainsKey($state) -and $QTable[$state].ContainsKey($action)) {
+            $currentQ = $QTable[$state][$action]
+            $newQ = $currentQ + ($Reward * 0.1) # Manual feedback has high weight
+            Set-QValue -QTable $QTable -State $state -Action $action -Value $newQ
+            Save-QTable -QTable $QTable
+            
+            $type = if ($Reward -gt 0) { "REINFORCED" } else { "PUNISHED" }
+            Write-Host "   [MANUAL] Last action '$action' was $type by user." -ForegroundColor Magenta
+        }
+    }
+}
+
 Export-ModuleMember -Function @(
     'Invoke-NeuralLearning',
     'Get-NeuralRecommendation', 
@@ -566,5 +589,6 @@ Export-ModuleMember -Function @(
     'Get-QTable',
     'Invoke-ExploratoryTweak',
     'Get-SystemLoadState',
-    'Update-PersistenceRewards'
+    'Update-PersistenceRewards',
+    'Set-UserFeedback'
 )
