@@ -20,7 +20,10 @@
 if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
     $currentDir = Split-Path $MyInvocation.MyCommand.Path
     $utilsPath = Join-Path $currentDir "NeuralUtils.psm1"
+    $plansPath = Join-Path $currentDir "Power-Plans.ps1"
+    
     if (Test-Path $utilsPath) { Import-Module $utilsPath -Force -DisableNameChecking }
+    if (Test-Path $plansPath) { Import-Module $plansPath -Force -DisableNameChecking }
 }
 
 Invoke-AdminCheck -Silent
