@@ -1,27 +1,28 @@
 ﻿<#
 .SYNOPSIS
-    Neural Cache Diagnostic v7.0 - AI-Enhanced Edition
+    Smart-Cache-Cleaner.ps1 - AI-Powered Cache Optimization
 
 .DESCRIPTION
     Advanced cache cleaning with AI prioritization:
-    - Q-Learning integration for optimal cleaning order
-    - Performance impact measurement
-    - Predictive analysis for cache growth
+    - Priority scoring based on size, context, and history
+    - Performance impact measurement (before/after score)
     - Multi-user support
     - Deep system logs cleanup
+    - Gaming/Work context detection
 
 .NOTES
-    Part of Windows Neural Optimizer v6.1 ULTRA
+    Part of Windows Neural Optimizer v7.0
     Author: Jose Bustamante
 #>
 
+$Script:ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+
 if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
-    $currentDir = Split-Path $MyInvocation.MyCommand.Path
-    $utilsPath = Join-Path $currentDir "NeuralModules\NeuralUtils.psm1"
+    $utilsPath = Join-Path $Script:ScriptDir "NeuralUtils.psm1"
     if (Test-Path $utilsPath) { Import-Module $utilsPath -Force -DisableNameChecking }
 }
 
-$aiModulePath = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "NeuralModules\NeuralAI.psm1"
+$aiModulePath = Join-Path $Script:ScriptDir "NeuralAI.psm1"
 if (Test-Path $aiModulePath) { Import-Module $aiModulePath -Force -DisableNameChecking }
 
 Invoke-AdminCheck -Silent
@@ -30,7 +31,7 @@ Invoke-AdminCheck -Silent
 # AI CONFIGURATION
 # ============================================================================
 
-$Script:CacheHistoryPath = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "NeuralCacheHistory.json"
+$Script:CacheHistoryPath = Join-Path (Split-Path $Script:ScriptDir -Parent) "CacheHistory.json"
 $Script:MLDataPath = Join-Path $env:LOCALAPPDATA "NeuralOptimizer\ML"
 $Script:PatternsFile = Join-Path $Script:MLDataPath "learned_patterns.json"
 

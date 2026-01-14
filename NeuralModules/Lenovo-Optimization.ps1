@@ -31,14 +31,15 @@ function Get-LenovoModel {
         $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
         $model = $cs.Model
         return @{
-            Manufacturer = $cs.Manufacturer
-            Model        = $model
-            SystemFamily = $cs.SystemFamily
-            IsThinkPad   = $model -match "ThinkPad"
-            IsIdeaPad    = $model -match "IdeaPad"
-            IsLegion     = $model -match "Legion"
-            IsYoga       = $model -match "Yoga"
-            IsLegionGo   = $model -match "Legion Go"
+            Manufacturer    = $cs.Manufacturer
+            Model           = $model
+            SystemFamily    = $cs.SystemFamily
+            IsThinkPad      = $model -match "ThinkPad"
+            IsIdeaPad       = $model -match "IdeaPad"
+            IsIdeaPadGaming = $model -match "IdeaPad Gaming"
+            IsLegion        = $model -match "Legion"
+            IsYoga          = $model -match "Yoga"
+            IsLegionGo      = $model -match "Legion Go"
         }
     }
     catch { return $null }
@@ -67,7 +68,7 @@ function Get-LenovoBiosSettings {
 }
 
 function Set-LenovoBiosSetting {
-    param([string]$SettingName, [string]$Value, [string]$BiosPassword = "")
+    param([string]$SettingName, [string]$Value, [System.Security.SecureString]$BiosPassword = $null)
     
     try {
         $setBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SetBiosSetting -ErrorAction Stop
@@ -78,8 +79,15 @@ function Set-LenovoBiosSetting {
             return $false
         }
         
+        $plainPassword = ""
+        if ($BiosPassword) {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($BiosPassword)
+            $plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+        
         $saveBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SaveBiosSettings -ErrorAction Stop
-        $saveArgs = @{ parameter = if ($BiosPassword) { "$BiosPassword,ascii,us" } else { "" } }
+        $saveArgs = @{ parameter = if ($plainPassword) { "$plainPassword,ascii,us" } else { "" } }
         $saveResult = $saveBios | Invoke-CimMethod -MethodName SaveBiosSettings -Arguments $saveArgs
         
         if ($saveResult.return -eq "Success") {
@@ -193,6 +201,39 @@ function Set-LegionRapidCharge {
 }
 
 # ============================================================================
+# IDEAPAD-SPECIFIC TWEAKS
+# ============================================================================
+
+function Set-IdeaPadFlipToStart {
+    param([switch]$Enable)
+    
+    if ($Enable) {
+        Set-LenovoBiosSetting -SettingName "FlipToBoot" -Value "Enable" | Out-Null
+        Write-Host " Flip-to-Start enabled (System boots when lid opened)" -ForegroundColor Green
+    }
+    else {
+        Set-LenovoBiosSetting -SettingName "FlipToBoot" -Value "Disable" | Out-Null
+        Write-Host " Flip-to-Start disabled" -ForegroundColor Yellow
+    }
+}
+
+function Set-IdeaPadFnLock {
+    param([switch]$Enable)
+    
+    if ($Enable) {
+        # Try both common names
+        Set-LenovoBiosSetting -SettingName "HotKeyMode" -Value "Disable" | Out-Null # Disable HotKey = F1-F12 standard
+        Set-LenovoBiosSetting -SettingName "FnKeyPrimary" -Value "Standard" | Out-Null
+        Write-Host " Fn Keys set to Standard (F1-F12)" -ForegroundColor Green
+    }
+    else {
+        Set-LenovoBiosSetting -SettingName "HotKeyMode" -Value "Enable" | Out-Null
+        Set-LenovoBiosSetting -SettingName "FnKeyPrimary" -Value "Special" | Out-Null
+        Write-Host " Fn Keys set to Special (Volume, Brightness)" -ForegroundColor Yellow
+    }
+}
+
+# ============================================================================
 # THINKPAD-SPECIFIC TWEAKS
 # ============================================================================
 
@@ -297,10 +338,10 @@ function Show-LenovoOptimizationMenu {
     
     Clear-Host
     Write-Host ""
-    Write-Host " === LENOVO OPTIMIZATION v2.0 ===" -ForegroundColor Magenta
+    Write-Host " === LENOVO OPTIMIZATION v2.1 ===" -ForegroundColor Magenta
     Write-Host ""
     Write-Host " Model: $($model.Model)" -ForegroundColor Cyan
-    Write-Host " Type: $(if($model.IsLegion){'Legion'}elseif($model.IsThinkPad){'ThinkPad'}elseif($model.IsIdeaPad){'IdeaPad'}elseif($model.IsYoga){'Yoga'}else{'Lenovo'})" -ForegroundColor Gray
+    Write-Host " Type: $(if($model.IsLegion){'Legion'}elseif($model.IsLegionGo){'Legion Go'}elseif($model.IsIdeaPadGaming){'IdeaPad Gaming'}elseif($model.IsThinkPad){'ThinkPad'}elseif($model.IsIdeaPad){'IdeaPad'}elseif($model.IsYoga){'Yoga'}else{'Lenovo'})" -ForegroundColor Gray
     Write-Host " WMI: $(if($wmiAvailable){'Available'}else{'Not Available'})" -ForegroundColor $(if ($wmiAvailable) { 'Green' }else { 'Yellow' })
     Write-Host ""
     
@@ -320,16 +361,22 @@ function Show-LenovoOptimizationMenu {
     Write-Host " 3. Battery Saver Mode"
     Write-Host ""
     
-    if ($model.IsLegion) {
-        Write-Host " === LEGION GAMING ===" -ForegroundColor Red
+    if ($model.IsLegion -or $model.IsIdeaPadGaming) {
+        Write-Host " === GAMING (Legion/IdeaPad) ===" -ForegroundColor Red
         Write-Host " 4. Toggle Hybrid Mode (dGPU/iGPU)"
         Write-Host " 5. Toggle GPU Overclock"
         Write-Host " 6. Toggle LCD OverDrive"
         Write-Host " 7. Toggle Rapid Charge"
         Write-Host ""
     }
-    
-    if ($model.IsThinkPad) {
+    elseif ($model.IsIdeaPad -or $model.IsYoga) {
+        Write-Host " === IDEAPAD/YOGA ===" -ForegroundColor Cyan
+        Write-Host " 4. Toggle Flip-to-Start"
+        Write-Host " 5. Toggle Fn Key Mode (Standard/Special)"
+        Write-Host " 6. Toggle Rapid Charge"
+        Write-Host ""
+    }
+    elseif ($model.IsThinkPad) {
         Write-Host " === THINKPAD ===" -ForegroundColor Blue
         Write-Host " 4. Toggle Fn Lock"
         Write-Host " 5. Set Charge Threshold (75-80%)"
@@ -347,47 +394,37 @@ function Show-LenovoOptimizationMenu {
     
     $choice = Read-Host " >> Option"
     
+    # Logic for shared menu numbers
+    if ($choice -match "[4567]") {
+        if ($model.IsLegion -or $model.IsIdeaPadGaming) {
+            switch ($choice) {
+                '4' { $hybrid = Read-Host " Disable Hybrid Mode for pure dGPU? (Y/N)"; if ($hybrid -match "^[Yy]") { Set-LegionHybridMode -Disable } else { Set-LegionHybridMode }; Read-Host " Press ENTER" }
+                '5' { $oc = Read-Host " Enable GPU Overclock? (Y/N)"; if ($oc -match "^[Yy]") { Set-LegionGPUOverclock -Enable } else { Set-LegionGPUOverclock }; Read-Host " Press ENTER" }
+                '6' { $od = Read-Host " Enable LCD OverDrive? (Y/N)"; if ($od -match "^[Yy]") { Set-LegionOverDrive -Enable } else { Set-LegionOverDrive }; Read-Host " Press ENTER" }
+                '7' { $rc = Read-Host " Enable Rapid Charge? (Y/N)"; if ($rc -match "^[Yy]") { Set-LegionRapidCharge -Enable } else { Set-LegionRapidCharge }; Read-Host " Press ENTER" }
+            }
+        }
+        elseif ($model.IsIdeaPad -or $model.IsYoga) {
+            switch ($choice) {
+                '4' { $flip = Read-Host " Enable Flip-to-Start? (Y/N)"; if ($flip -match "^[Yy]") { Set-IdeaPadFlipToStart -Enable } else { Set-IdeaPadFlipToStart }; Read-Host " Press ENTER" }
+                '5' { $fn = Read-Host " Enable Standard Fn Keys (F1-F12)? (Y/N)"; if ($fn -match "^[Yy]") { Set-IdeaPadFnLock -Enable } else { Set-IdeaPadFnLock }; Read-Host " Press ENTER" }
+                '6' { $rc = Read-Host " Enable Rapid Charge? (Y/N)"; if ($rc -match "^[Yy]") { Set-LegionRapidCharge -Enable } else { Set-LegionRapidCharge }; Read-Host " Press ENTER" }
+            }
+        }
+        elseif ($model.IsThinkPad) {
+            switch ($choice) {
+                '4' { Set-ThinkPadFnLock -Enable; Read-Host " Press ENTER" }
+                '5' { Set-ThinkPadChargeThreshold -StartPercent 75 -StopPercent 80; Read-Host " Press ENTER" }
+                '6' { Set-ThinkPadTrackPointSpeed -Speed "High"; Read-Host " Press ENTER" }
+            }
+        }
+        return
+    }
+
     switch ($choice) {
         '1' { Set-LenovoPerformanceMode; Read-Host " Press ENTER" }
         '2' { Set-ThermalProfile -ThermalMode "Balanced" -PowerSource "Both"; Read-Host " Press ENTER" }
         '3' { Set-LenovoBatterySaver; Read-Host " Press ENTER" }
-        '4' {
-            if ($model.IsLegion) {
-                $hybrid = Read-Host " Disable Hybrid Mode for pure dGPU? (Y/N)"
-                if ($hybrid -match "^[Yy]") { Set-LegionHybridMode -Disable } else { Set-LegionHybridMode }
-            }
-            elseif ($model.IsThinkPad) {
-                Set-ThinkPadFnLock -Enable
-            }
-            Read-Host " Press ENTER"
-        }
-        '5' {
-            if ($model.IsLegion) {
-                $oc = Read-Host " Enable GPU Overclock? (Y/N)"
-                if ($oc -match "^[Yy]") { Set-LegionGPUOverclock -Enable } else { Set-LegionGPUOverclock }
-            }
-            elseif ($model.IsThinkPad) {
-                Set-ThinkPadChargeThreshold -StartPercent 75 -StopPercent 80
-            }
-            Read-Host " Press ENTER"
-        }
-        '6' {
-            if ($model.IsLegion) {
-                $od = Read-Host " Enable LCD OverDrive? (Y/N)"
-                if ($od -match "^[Yy]") { Set-LegionOverDrive -Enable } else { Set-LegionOverDrive }
-            }
-            elseif ($model.IsThinkPad) {
-                Set-ThinkPadTrackPointSpeed -Speed "High"
-            }
-            Read-Host " Press ENTER"
-        }
-        '7' {
-            if ($model.IsLegion) {
-                $rc = Read-Host " Enable Rapid Charge? (Y/N)"
-                if ($rc -match "^[Yy]") { Set-LegionRapidCharge -Enable } else { Set-LegionRapidCharge }
-            }
-            Read-Host " Press ENTER"
-        }
         '8' {
             $usb = Read-Host " Enable USB Always On? (Y/N)"
             if ($usb -match "^[Yy]") { Set-LenovoUSBAlwaysOn -Enable } else { Set-LenovoUSBAlwaysOn }

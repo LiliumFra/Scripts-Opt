@@ -421,7 +421,7 @@ while ($true) {
                     '8' { Invoke-OptimizationModule -Name 'SSD-NVME' -ScriptPath (Join-Path $Script:ModuleDir "SSD-NVMe-Optimizer.ps1"); Wait-ForKeyPress }
                     '9' { Invoke-OptimizationModule -Name 'PERF-EXTREME' -ScriptPath (Join-Path $Script:ModuleDir "Performance-Extreme.ps1"); Wait-ForKeyPress }
                     '10' { Invoke-OptimizationModule -Name 'PRIVACY' -ScriptPath (Join-Path $Script:ModuleDir "Privacy-Guardian.ps1"); Wait-ForKeyPress }
-                    '11' { Invoke-OptimizationModule -Name 'CACHE' -ScriptPath (Join-Path $Script:ScriptDir "NeuralCache-Diagnostic.ps1"); Wait-ForKeyPress }
+                    '11' { Invoke-OptimizationModule -Name 'SMART-CACHE' -ScriptPath (Join-Path $Script:ModuleDir "Smart-Cache-Cleaner.ps1"); Wait-ForKeyPress }
                     '12' { Invoke-OptimizationModule -Name 'UPDATE-MGR' -ScriptPath (Join-Path $Script:ModuleDir "Update-Manager.ps1"); Wait-ForKeyPress }
                     '13' { Invoke-OptimizationModule -Name 'UI-PREFS' -ScriptPath (Join-Path $Script:ModuleDir "UI-Preferences.ps1"); Wait-ForKeyPress }
                     '14' { Invoke-OptimizationModule -Name 'MONITOR' -ScriptPath (Join-Path $Script:ModuleDir "System-Monitor.ps1"); Wait-ForKeyPress }
