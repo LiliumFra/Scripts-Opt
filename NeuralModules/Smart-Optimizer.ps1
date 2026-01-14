@@ -615,6 +615,49 @@ function Invoke-CpuMitigationToggles {
     }
 }
 
+
+function Invoke-ServiceOptimizations {
+    param($hw)
+    Write-Step "OPTIMIZACION DE SERVICIOS INTELIGENTE"
+    
+    $servicesToDisable = @(
+        "DiagTrack",          # Telemetry
+        "dmwappushservice",   # WAP Push (Telemetry)
+        "MapsBroker",         # Downloaded Maps Manager
+        "RetailDemo",         # Retail Demo Service
+        "WalletService",      # Wallet Service
+        "XblGameSave",        # Xbox Game Save (Only if user doesn't game? No, keep safe, disabling interferes with GamePass)
+        "XboxNetApiSvc"       # Xbox Live Networking (Keep safe)
+    )
+    
+    # Safe bloat removal list
+    $bloatServices = @("RetailDemo", "MapsBroker", "WalletService")
+    
+    # Fax (Who uses Fax?)
+    $bloatServices += "Fax"
+    
+    foreach ($svcName in $bloatServices) {
+        $svc = Get-Service $svcName -ErrorAction SilentlyContinue
+        if ($svc -and $svc.StartType -ne "Disabled") {
+            Set-Service $svcName -StartupType Disabled -ErrorAction SilentlyContinue
+            Stop-Service $svcName -Force -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Servicio Bloatware desactivado: $svcName" -ForegroundColor Green
+        }
+    }
+    
+    # Laptop specific services
+    if (-not $hw.IsLaptop) {
+        # Sensor Service (Rotacion, Brillo) - Usually not needed on Desktop
+        $sensorSvc = Get-Service "SensorService" -ErrorAction SilentlyContinue
+        if ($sensorSvc -and $sensorSvc.Status -ne "Stopped") {
+            Set-Service "SensorService" -StartupType Disabled -ErrorAction SilentlyContinue
+            Write-Host "   [OK] Servicio Sensores (Desktop): Desactivado" -ForegroundColor Green
+        }
+    }
+    
+    Write-Host "   [OK] Limpieza de servicios completada" -ForegroundColor Green
+}
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
@@ -635,6 +678,12 @@ function Invoke-SmartOptimization {
     
     # Show analysis
     Show-HardwareAnalysis $hw
+    
+    if ($hw.IsHybrid) {
+        Write-Host " [!] Arquitectura Hibrida (P-Cores/E-Cores) detectada." -ForegroundColor Magenta
+        Write-Host "     Se aplicaran politicas de programacion heterogenea." -ForegroundColor Gray
+        Write-Host ""
+    }
     
     # Confirmation
     Write-Host ""
@@ -674,6 +723,11 @@ function Invoke-SmartOptimization {
         Write-Host "   > Storage: NVMe detectado -> Optimizacion Maxima I/O." -ForegroundColor Green
     }
     
+    # 5. Hybrid Awareness
+    if ($hw.IsHybrid) {
+        Write-Host "   > Hybrid CPU: Optimizando Thread Director y Parking." -ForegroundColor Magenta
+    }
+
     Write-Host ""
     # --------------------------------
     
@@ -684,6 +738,7 @@ function Invoke-SmartOptimization {
     Invoke-GPUOptimizations $hw
     Invoke-NetworkOptimizations $hw
     Invoke-VisualOptimizations $hw
+    Invoke-ServiceOptimizations $hw  # Added Smart Services
     # Invoke-PowerOptimizations $hw # Deprecated in favor of Neural Power Plans
     
     # Create/Ensure Plans exist

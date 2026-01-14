@@ -562,25 +562,34 @@ function Get-HardwareProfile {
     }
     catch {}
     
-    # CPU Generation Detection (for Spectre mitigation recommendation)
+    # CPU Generation & Hybrid Topology Detection
     try {
         $hw | Add-Member -MemberType NoteProperty -Name "CpuGen" -Value "Unknown" -ErrorAction SilentlyContinue
         $hw | Add-Member -MemberType NoteProperty -Name "IsOldCpu" -Value $false -ErrorAction SilentlyContinue
+        $hw | Add-Member -MemberType NoteProperty -Name "IsHybrid" -Value $false -ErrorAction SilentlyContinue # P-Core/E-Core
         
-        if ($hw.CpuName -match "Intel.*Core.*i\d-(\d+)") {
-            $model = $matches[1]
-            if ($model.Length -eq 4) { $gen = [int]$model.Substring(0, 1) }
-            elseif ($model.Length -eq 5) { $gen = [int]$model.Substring(0, 2) }
+        if ($hw.CpuName -match "Intel.*Core.*(i\d|Ultra).*-?(\d+)") {
+            # Matches i9-12900K, i7-13700, Core Ultra 7
+            $modelStr = $matches[2] # 12900, 13700, etc.
+            
+            # Simple heuristic for generation based on first 2 digits of 5-digit number, or first 1 of 4-digit
+            $gen = 0
+            if ($modelStr.Length -ge 5) { $gen = [int]$modelStr.Substring(0, 2) }
+            elseif ($modelStr.Length -eq 4) { $gen = [int]$modelStr.Substring(0, 1) }
             
             if ($gen) {
                 $hw.CpuGen = "Intel Gen $gen"
-                if ($gen -lt 8) { $hw.IsOldCpu = $true } # Gen 7 (Kaby Lake) or older often benefit significantly
+                if ($gen -lt 8) { $hw.IsOldCpu = $true }
+                if ($gen -ge 12) { $hw.IsHybrid = $true; $hw.CpuGen += " (Hybrid)" } # Alder Lake+
             }
         }
         elseif ($hw.CpuName -match "Ryzen \d (\d{4})") {
             [int]$gen = $matches[1]
             $hw.CpuGen = "AMD Ryzen Series $gen"
-            # Ryzen 1000/2000 specific checks if needed, generally less critical for Spectre, but useful context
+            if ($gen -ge 7000) { 
+                # Some 7000/9000 are heterogeneous (X3D mixed CCDs), but mostly treated as uniform
+                # We won't flag IsHybrid yet for AMD unless we do specific CCD checks
+            }
         }
     }
     catch {}
