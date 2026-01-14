@@ -625,6 +625,115 @@ function Set-UserFeedback {
     }
 }
 
+
+
+function Start-NeuralAutoPilot {
+    param(
+        [string]$ProfileName, 
+        [int]$TargetScore = 95,
+        [int]$MaxNoOps = 5
+    )
+    
+    Clear-Host
+    Write-Host " ==========================================================" -ForegroundColor Magenta
+    Write-Host "   NEURAL AUTO-PILOT ENGAGED (SMART STOP MODE)" -ForegroundColor Yellow
+    Write-Host "   Target: $TargetScore+ | Convergence Limit: $MaxNoOps cycles" -ForegroundColor Gray
+    Write-Host "   Press CTRL+C to Stop Manually" -ForegroundColor Gray
+    Write-Host " ==========================================================" -ForegroundColor Magenta
+    Write-Host ""
+    
+    $config = Get-NeuralConfig
+    $qTable = Get-QTable
+    $brain = Get-NeuralBrain
+    $epsilon = 0.15 # Low exploration for AutoPilot
+    $consecutiveNoOps = 0
+    
+    while ($true) {
+        $hardware = Get-HardwareProfile
+        $loadState = Get-SystemLoadState
+        
+        # 1. Safety Pause
+        if ($loadState -eq "Thrashing") {
+            Write-Host "   [!] System High Load. Pausing 30s..." -ForegroundColor Red
+            Start-Sleep -Seconds 30
+            continue
+        }
+        
+        Write-Host "   [AUTO] Analyzing System State ($loadState)..." -ForegroundColor Cyan
+        
+        # 2. Deep Verification Baseline (10s)
+        Write-Host "   [VERIFY] Measuring Baseline (10s deep scan)..." -ForegroundColor DarkGray
+        $baseline = Measure-SystemMetrics -DurationSeconds 10
+        Write-Host "   [BASELINE] Score: $($baseline.Score)" -ForegroundColor Yellow
+        
+        # 3. SMART STOP CHECK
+        if ($baseline.Score -ge $TargetScore) {
+            if ($consecutiveNoOps -ge $MaxNoOps) {
+                Write-Host ""
+                Write-Host "   [OPTIMIZATION COMPLETE] Target Reached & Converged." -ForegroundColor Green
+                Write-Host "   Final Score: $($baseline.Score)" -ForegroundColor Green
+                Write-Host "   System is fully optimized. Auto-Pilot stopping." -ForegroundColor Cyan
+                Write-Host " ==========================================================" -ForegroundColor Magenta
+                break # EXIT LOOP
+            }
+            else {
+                Write-Host "   [OPTIMAL] Score is high ($($baseline.Score)). Checking stability ($consecutiveNoOps/$MaxNoOps)..." -ForegroundColor Green
+                $consecutiveNoOps++
+            }
+        }
+        
+        # 4. Action Selection
+        $state = Get-CurrentState -Hardware $hardware -Workload "AutoPilot"
+        $action = Get-BestAction -QTable $qTable -State $state -AvailableActions $Script:TweakLibrary.Id -Epsilon $epsilon
+        
+        if ($action) {
+            Write-Host "   [ACT] Applying Tweak: $action" -ForegroundColor White
+            $applied = Invoke-Tweak -TweakId $action -Apply
+            
+            if ($applied) {
+                # Deep Verify Result
+                Start-Sleep -Seconds 2
+                $result = Measure-SystemMetrics -DurationSeconds 10
+                $reward = Get-CompositeScore -Baseline $baseline -Current $result -RiskLevel "Medium"
+                
+                $resultColor = if ($reward -gt 0) { "Green" } else { "Red" }
+                Write-Host "   [RESULT] New Score: $($result.Score) | Reward: $reward" -ForegroundColor $resultColor
+                
+                # Update Q-Table
+                $newState = Get-CurrentState -Hardware $hardware -Workload "AutoPilot"
+                Update-QValue -QTable $qTable -State $state -Action $action -Reward $reward -NewState $newState -AvailableActions $Script:TweakLibrary.Id
+                
+                # History
+                $record = @{ Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; State = $state; Action = $action; Reward = $reward; Mode = "AutoPilot" }
+                $brain.History += $record
+                $brain.History = $brain.History | Select-Object -Last 100
+                
+                if ($reward -gt 0) {
+                    $consecutiveNoOps = 0 # Reset counter on valid improvement
+                }
+                elseif ($reward -lt 0) {
+                    Write-Host "   [REVERT] Reverting..." -ForegroundColor Yellow
+                    Invoke-Tweak -TweakId $action -Revert
+                    $consecutiveNoOps++ # Failure counts towards convergence
+                }
+                
+                Save-QTable -QTable $qTable
+                Save-NeuralBrain -Data $brain
+            }
+            else {
+                $consecutiveNoOps++
+            }
+        }
+        else {
+            Write-Host "   [SKIP] No confident actions found." -ForegroundColor DarkGray
+            $consecutiveNoOps++
+        }
+        
+        Write-Host "   [WAIT] Cooling down (5s)..." -ForegroundColor DarkGray
+        Start-Sleep -Seconds 5
+    }
+}
+
 Export-ModuleMember -Function @(
     'Invoke-NeuralLearning',
     'Get-NeuralRecommendation', 
@@ -635,5 +744,6 @@ Export-ModuleMember -Function @(
     'Invoke-ExploratoryTweak',
     'Get-SystemLoadState',
     'Update-PersistenceRewards',
-    'Set-UserFeedback'
+    'Set-UserFeedback',
+    'Start-NeuralAutoPilot'
 )
