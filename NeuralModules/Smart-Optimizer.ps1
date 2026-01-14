@@ -376,7 +376,7 @@ function Invoke-GPUOptimizations {
     # Common GPU optimizations
     Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -Name "GPU Priority" -Value 8 -Desc "Game GPU Priority: 8"
     Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -Name "Priority" -Value 6 -Desc "Game Priority: 6"
-    Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -Name "Scheduling Category" -Value "High" -Desc "Game Scheduling: High"
+    Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" -Name "Scheduling Category" -Value "High" -Type String -Desc "Game Scheduling: High"
     
     # Hardware-accelerated GPU scheduling (if supported)
     Set-RegistryKey -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -Value 2 -Desc "Hardware GPU Scheduling ON"
@@ -582,8 +582,8 @@ function Invoke-AudioLatencyOptimizations {
     if (Test-Path $tasks) {
         Set-RegistryKey -Path $tasks -Name "GPU Priority" -Value 8 -Desc "GPU Priority (8)"
         Set-RegistryKey -Path $tasks -Name "Priority" -Value 6 -Desc "Games MM Priority (6)"
-        Set-RegistryKey -Path $tasks -Name "Scheduling Category" -Value "High" -Desc "Scheduling: High"
-        Set-RegistryKey -Path $tasks -Name "SFIO Priority" -Value "High" -Desc "SFIO: High"
+        Set-RegistryKey -Path $tasks -Name "Scheduling Category" -Value "High" -Type String -Desc "Scheduling: High"
+        Set-RegistryKey -Path $tasks -Name "SFIO Priority" -Value "High" -Type String -Desc "SFIO: High"
     }
 
     Write-Host "   [OK] Latencia de audio optimizada" -ForegroundColor Green

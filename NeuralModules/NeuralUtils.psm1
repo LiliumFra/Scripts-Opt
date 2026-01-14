@@ -460,36 +460,7 @@ function Get-HardwareProfile {
     }
     catch {}
 
-    function Set-DeviceMSIMode {
-        param(
-            [string]$PnpDeviceID,
-            [string]$DeviceDesc = "Device"
-        )
-    
-        if (-not $PnpDeviceID) { return }
-    
-        try {
-            # Registry location for PCI devices
-            # HKLM\SYSTEM\CurrentControlSet\Enum\<PnpDeviceID>\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties
-        
-            $basePath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$PnpDeviceID\Device Parameters\Interrupt Management"
-            $msiPath = "$basePath\MessageSignaledInterruptProperties"
-        
-            # Check if key exists, if not create specifically for MSI support if driver allows (risky, so we usually only toggle if key implies support or we force it known safe devices)
-            # Safer: Only enable if "MessageSignaledInterruptProperties" usually exists or we are sure.
-            # For now, we create structure if missing which is standard for forcing MSI.
-        
-            if (-not (Test-Path $msiPath)) {
-                New-Item -Path $msiPath -Force | Out-Null
-                New-Item -Path "$basePath\Affinity Policy" -Force | Out-Null
-            }
-        
-            Set-RegistryKey -Path $msiPath -Name "MSISupported" -Value 1 -Type DWord -Desc "Enable MSI Mode for $DeviceDesc"
-        }
-        catch {
-            Write-Log "Failed to set MSI mode for $($DeviceDesc): $_" "Error"
-        }
-    }
+
     
     # SSD Detection
     try {
@@ -837,6 +808,33 @@ function Set-NeuralConfig {
     }
 }
 
-Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig
 
+function Set-DeviceMSIMode {
+    param(
+        [string]$PnpDeviceID,
+        [string]$DeviceDesc = "Device"
+    )
 
+    if (-not $PnpDeviceID) { return }
+
+    try {
+        # Registry location for PCI devices
+        # HKLM\SYSTEM\CurrentControlSet\Enum\<PnpDeviceID>\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties
+    
+        $basePath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$PnpDeviceID\Device Parameters\Interrupt Management"
+        $msiPath = "$basePath\MessageSignaledInterruptProperties"
+    
+        # Check if key exists
+        if (-not (Test-Path $msiPath)) {
+            New-Item -Path $msiPath -Force | Out-Null
+            New-Item -Path "$basePath\Affinity Policy" -Force | Out-Null
+        }
+    
+        Set-RegistryKey -Path $msiPath -Name "MSISupported" -Value 1 -Type DWord -Desc "Enable MSI Mode for $DeviceDesc" -SkipBackup
+    }
+    catch {
+        Write-Log "Failed to set MSI mode for $($DeviceDesc): $_" "Error"
+    }
+}
+
+Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig, Set-DeviceMSIMode
