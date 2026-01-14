@@ -704,10 +704,20 @@ function Invoke-SmartOptimization {
     Write-Host " [IA] Decidiendo configuracion optima..." -ForegroundColor Cyan
     Write-Host ""
     
-    # 1. Power Plan Decision
+    # 1. Power Plan Decision (Heuristic Default)
     $planTarget = "Neural Balanced"
     if ($hw.PerformanceTier -match "Ultra|High") { $planTarget = "Neural Low Latency" }
     elseif ($hw.PerformanceTier -eq "Streaming") { $planTarget = "Neural Streaming" }
+    
+    # [AI OVERRIDE] Check Brain for better historical performance
+    if (Get-Command "Get-NeuralRecommendation" -ErrorAction SilentlyContinue) {
+        $recommendation = Get-NeuralRecommendation -Hardware $hw
+        if ($recommendation -and $recommendation.RecommendedProfile) {
+            $planTarget = $recommendation.RecommendedProfile
+            Write-Host "   [AI] Override: Switching to '$planTarget' (Score: $([math]::Round($recommendation.Confidence, 0)))" -ForegroundColor Magenta
+        }
+    }
+
     Write-Host "   > Perfil: $($hw.PerformanceTier) -> Plan: $planTarget" -ForegroundColor Green
     
     # 2. Kernel/Latency Decision

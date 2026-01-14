@@ -26,6 +26,8 @@ function Get-NeuralBrain {
             return @{ History = @() }
         }
     }
+    # Future expansion: Cloud AI integration
+    # For now, local logic only
     return @{ History = @() }
 }
 
@@ -97,7 +99,8 @@ function Invoke-NeuralLearning {
     $history = $brain.History 
     if ($history -is [System.Array]) {
         $history += $record
-    } else {
+    }
+    else {
         $history = @($record)
     }
     
@@ -115,14 +118,29 @@ function Get-NeuralRecommendation {
     param($Hardware)
     
     $brain = Get-NeuralBrain
-    if (-not $brain.History) { return $null }
+    if (-not $brain.History) { 
+        return $null 
+    }
     
-    # Find best profile for this CPU
-    $best = $brain.History | Where-Object { $_.Hardware -eq $Hardware.CpuName } | Sort-Object Score -Descending | Select-Object -First 1
+    # 1. Filter history for this CPU
+    $history = $brain.History | Where-Object { $_.Hardware -eq $Hardware.CpuName }
+    if (-not $history) { return $null }
+
+    # 2. Find the best scoring profile
+    # We group by profile and average the score to avoid outliers
+    $stats = $history | Group-Object Profile | Select-Object Name, @{N = 'AvgScore'; E = { ($_.Group | Measure-Object Score -Average).Average } } | Sort-Object AvgScore -Descending
+    
+    $best = $stats | Select-Object -First 1
     
     if ($best) {
-        return $best.Profile
+        Write-Host "   [AI] Recommendation: Found historical best override ($($best.Name))" -ForegroundColor Magenta
+        return [PSCustomObject]@{
+            RecommendedProfile = $best.Name
+            Confidence         = $best.AvgScore
+            Reason             = "Based on historical average performance"
+        }
     }
+    
     return $null
 }
 
