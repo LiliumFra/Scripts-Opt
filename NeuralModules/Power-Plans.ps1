@@ -11,7 +11,6 @@ function Invoke-PowerPlanCreation {
     $guidCoreParkingMax = "ea062031-0e34-4ff1-9b6d-eb1059334029" # Max Cores
     $guidIdleDisable = "5d76a2ca-e8c0-402f-a133-2158492d58ad" # Idle Disable
     $guidPerfBoost = "be337238-0d82-4146-a960-4f3749d470c7" # Perf Boost Mode
-    $guidThrottling = "bc5038f7-23e0-4960-96da-33abaf5935ec" # Max Processor State
     
     # Check existing plans
     $plans = powercfg /list
