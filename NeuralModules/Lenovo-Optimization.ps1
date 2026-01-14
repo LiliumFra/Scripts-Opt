@@ -68,7 +68,11 @@ function Get-LenovoBiosSettings {
 }
 
 function Set-LenovoBiosSetting {
-    param([string]$SettingName, [string]$Value, [System.Security.SecureString]$BiosPassword = $null)
+    param(
+        [string]$SettingName,
+        [string]$Value,
+        [System.Security.SecureString]$BiosPassword = $null
+    )
     
     try {
         $setBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SetBiosSetting -ErrorAction Stop
@@ -86,9 +90,9 @@ function Set-LenovoBiosSetting {
             [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
         }
         
+        $paramStr = if ($plainPassword) { "$plainPassword,ascii,us" } else { "" }
         $saveBios = Get-CimInstance -Namespace root\wmi -ClassName Lenovo_SaveBiosSettings -ErrorAction Stop
-        $saveArgs = @{ parameter = if ($plainPassword) { "$plainPassword,ascii,us" } else { "" } }
-        $saveResult = $saveBios | Invoke-CimMethod -MethodName SaveBiosSettings -Arguments $saveArgs
+        $saveResult = $saveBios | Invoke-CimMethod -MethodName SaveBiosSettings -Arguments @{ parameter = $paramStr }
         
         if ($saveResult.return -eq "Success") {
             Write-Host " [OK] $SettingName = $Value" -ForegroundColor Green
