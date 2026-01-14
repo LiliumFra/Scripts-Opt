@@ -1,5 +1,6 @@
 {
-  "High|General|Morning|Idle": {
-    "TimerRes": 0.1
+  "High|AutoPilot|Afternoon|Idle": {
+    "MemCompress": 13.546359100000002,
+    "Telemetry": 39.40399
   }
 }

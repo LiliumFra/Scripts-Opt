@@ -114,6 +114,41 @@
       "Profile": "Dashboard-Manual",
       "Tier": "High",
       "Hardware": "Live-Dashboard"
+    },
+    {
+      "State": "High|AutoPilot|Afternoon|Idle",
+      "Timestamp": "2026-01-14 12:34:53",
+      "Action": "Telemetry",
+      "Reward": 100,
+      "Mode": "AutoPilot"
+    },
+    {
+      "State": "High|AutoPilot|Afternoon|Idle",
+      "Timestamp": "2026-01-14 12:35:05",
+      "Action": "Telemetry",
+      "Reward": 100,
+      "Mode": "AutoPilot"
+    },
+    {
+      "State": "High|AutoPilot|Afternoon|Idle",
+      "Timestamp": "2026-01-14 12:35:17",
+      "Action": "Telemetry",
+      "Reward": 100,
+      "Mode": "AutoPilot"
+    },
+    {
+      "State": "High|AutoPilot|Afternoon|Idle",
+      "Timestamp": "2026-01-14 12:35:29",
+      "Action": "Telemetry",
+      "Reward": 100,
+      "Mode": "AutoPilot"
+    },
+    {
+      "State": "High|AutoPilot|Afternoon|Idle",
+      "Timestamp": "2026-01-14 12:35:43",
+      "Action": "MemCompress",
+      "Reward": 100,
+      "Mode": "AutoPilot"
     }
   ]
 }

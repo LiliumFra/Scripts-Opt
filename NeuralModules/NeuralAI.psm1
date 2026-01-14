@@ -602,6 +602,35 @@ function Update-PersistenceRewards {
     Write-Host "   [AI] Long-Term Memory Consolidated ($($longTermSuccess.Count) records processed)" -ForegroundColor DarkGray
 }
 
+function Get-BestAction {
+    param(
+        [hashtable]$QTable,
+        [string]$State,
+        [array]$AvailableActions,
+        [double]$Epsilon
+    )
+
+    # Exploration (Epsilon-Greedy)
+    if ((Get-Random -Minimum 0.0 -Maximum 1.0) -lt $Epsilon) {
+        return $AvailableActions | Get-Random
+    }
+
+    # Exploitation (Best Known Action)
+    if ($QTable.ContainsKey($State)) {
+        $actions = $QTable[$State]
+        
+        # Sort by Q-Value descending
+        $bestAction = $actions.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1
+        
+        if ($bestAction) {
+            return $bestAction.Key
+        }
+    }
+
+    # Fallback (New State or Empty): Random
+    return $AvailableActions | Get-Random
+}
+
 function Set-UserFeedback {
     param([int]$Reward)
     
@@ -740,6 +769,7 @@ Export-ModuleMember -Function @(
     'Get-NeuralBrain',
     'Measure-SystemMetrics',
     'Get-BestTweaksForState',
+    'Get-BestAction',
     'Get-QTable',
     'Invoke-ExploratoryTweak',
     'Get-SystemLoadState',

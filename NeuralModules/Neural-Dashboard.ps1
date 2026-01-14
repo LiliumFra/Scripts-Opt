@@ -96,43 +96,59 @@ if ($RunLoop) {
         
         if ($Host.UI.RawUI.KeyAvailable) {
             $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-            switch ($key.VirtualKeyCode) {
-                76 {
+            
+            # Use Character matching for reliability
+            switch ($key.Character) {
+                { $_ -in 'l', 'L' } {
                     # L - Learn
                     Write-Host "   [AI] Starting Learning Cycle..." -ForegroundColor Yellow
-                    $hw = [PSCustomObject]@{ PerformanceTier = "High"; CpuName = "Live-Dashboard" } # Re-added original $hw definition
-                    Invoke-NeuralLearning -ProfileName "Dashboard-Manual" -Hardware $hw # Re-added original ProfileName and $hw
+                    $hw = [PSCustomObject]@{ PerformanceTier = "High"; CpuName = "Live-Dashboard" } 
+                    Invoke-NeuralLearning -ProfileName "Dashboard-Manual" -Hardware $hw
                     Start-Sleep -Seconds 3
                 }
-                65 {
+                { $_ -in 'a', 'A' } {
                     # A - Auto-Pilot
                     Write-Host "   [AI] Engaging Auto-Pilot..." -ForegroundColor Magenta
                     Start-Sleep -Seconds 1
-                    Start-NeuralAutoPilot
+                    
+                    try {
+                        if (Get-Command "Start-NeuralAutoPilot" -ErrorAction SilentlyContinue) {
+                            Start-NeuralAutoPilot
+                        }
+                        else {
+                            Write-Host "   [ERROR] Start-NeuralAutoPilot function not found!" -ForegroundColor Red
+                            Write-Host "   Please restart the optimization script." -ForegroundColor Gray
+                            Read-Host "   Press Enter to continue..."
+                        }
+                    }
+                    catch {
+                        Write-Host "   [ERROR] Auto-Pilot Failed: $_" -ForegroundColor Red
+                        Read-Host "   Press Enter to continue..."
+                    }
                 }
-                70 {
+                { $_ -in 'f', 'F' } {
                     # F - Force Consolidate
                     Write-Host "   [AI] Consolidating Long-Term Memories..." -ForegroundColor Cyan
                     Update-PersistenceRewards -QTable (Get-QTable)
                     Start-Sleep -Seconds 2
                 }
-                82 {
+                { $_ -in 'r', 'R' } {
                     # R - Reward
                     Set-UserFeedback -Reward 1
                     Start-Sleep -Seconds 1
                 }
-                80 {
+                { $_ -in 'p', 'P' } {
                     # P - Punish
                     Set-UserFeedback -Reward -1
                     Start-Sleep -Seconds 1
                 }
-                81 {
+                { $_ -in 'q', 'Q' } {
                     # Q - Quit
                     break
                 }
             }
         }
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 200
     }
 }
 else {
@@ -146,28 +162,45 @@ else {
         if ($Host.UI.RawUI.KeyAvailable) {
             $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             switch ($key.Character) {
-                'l' { 
+                { $_ -in 'l', 'L' } { 
                     Write-Host "   Running Learning Cycle..." -ForegroundColor Yellow
                     $hw = [PSCustomObject]@{ PerformanceTier = "High"; CpuName = "Live-Dashboard" }
                     Invoke-NeuralLearning -ProfileName "Dashboard-Manual" -Hardware $hw
                     Start-Sleep -Seconds 2
                 }
-                'f' {
+                { $_ -in 'a', 'A' } {
+                    Write-Host "   [AI] Engaging Auto-Pilot..." -ForegroundColor Magenta
+                    Start-Sleep -Seconds 1
+                    try {
+                        if (Get-Command "Start-NeuralAutoPilot" -ErrorAction SilentlyContinue) {
+                            Start-NeuralAutoPilot
+                        }
+                        else {
+                            Write-Host "   [ERROR] Start-NeuralAutoPilot function not found!" -ForegroundColor Red
+                            Read-Host "   Press Enter to continue..."
+                        }
+                    }
+                    catch {
+                        Write-Host "   [ERROR] $_" -ForegroundColor Red
+                        Read-Host "   Press Enter..."
+                    }
+                }
+                { $_ -in 'f', 'F' } {
                     Update-PersistenceRewards -QTable (Get-QTable)
                     Start-Sleep -Seconds 2
                 }
-                'r' {
+                { $_ -in 'r', 'R' } {
                     Set-UserFeedback -Reward 10
                     Start-Sleep -Seconds 1
                 }
-                'p' {
+                { $_ -in 'p', 'P' } {
                     Set-UserFeedback -Reward -10
                     Start-Sleep -Seconds 1
                 }
-                'q' { return }
+                { $_ -in 'q', 'Q' } { return }
             }
         }
         
-        Start-Sleep -Milliseconds 1000
+        Start-Sleep -Milliseconds 200
     } while ($true)
 }
