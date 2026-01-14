@@ -1,13 +1,16 @@
 <#
 .SYNOPSIS
-    Neural-AI Module v1.0
-    Implements Local Reinforcement Learning (RL) for system optimization.
+    Neural-AI Module v2.0
+    Implements Local Reinforcement Learning (Q-Learning) for system optimization.
 
 .DESCRIPTION
-    This module enables the "Optimize-and-Learn" loop:
-    1. Observe: Measure system latency (DPC/Interrupts).
-    2. Remember: Store results in a local JSON "Brain".
-    3. Adapt: Future runs can query the Brain to see which settings yielded the best scores.
+    Advanced AI module with:
+    - Q-Learning with persistent Q-Table
+    - Expanded system metrics (GPU, Disk, Network, Temperature)
+    - Epsilon-greedy exploration with decay
+    - 12+ exploratory tweaks with risk assessment
+    - Adaptive reward function
+    - Performance regression detection
 
 .NOTES
     Part of Windows Neural Optimizer
@@ -16,193 +19,426 @@
 
 $Script:ModulePath = Split-Path $MyInvocation.MyCommand.Path -Parent
 $Script:BrainPath = Join-Path $Script:ModulePath "..\NeuralBrain.json"
+$Script:QTablePath = Join-Path $Script:ModulePath "..\NeuralQTable.json"
+$Script:ConfigPath = Join-Path $Script:ModulePath "..\NeuralConfig.json"
 
+# Q-Learning Configuration
+$Script:QLearningConfig = @{
+    Alpha          = 0.1
+    Gamma          = 0.9
+    EpsilonInitial = 0.30
+    EpsilonMin     = 0.05
+    EpsilonDecay   = 0.995
+    CurrentEpsilon = 0.30
+}
+
+# Tweaks Library - Expanded from GitHub Research (Win11Debloat, Perfect-Windows-11, facet4windows)
+$Script:TweakLibrary = @(
+    # === LOW RISK TWEAKS ===
+    # Latency
+    @{ Id = "TimerRes"; Name = "Global Timer Resolution"; Risk = "Low"; Category = "Latency"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"; Key = "GlobalTimerResolutionRequests"; ValueOn = 1; ValueOff = 0; Description = "Forces high-resolution timer" },
+    @{ Id = "DynamicTick"; Name = "Disable Dynamic Tick"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set disabledynamictick yes"; CommandOff = "bcdedit /set disabledynamictick no"; Description = "Disables power-saving tick" },
+    @{ Id = "HPET"; Name = "Disable HPET"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set useplatformclock no"; CommandOff = "bcdedit /set useplatformclock yes"; Description = "Uses TSC instead of HPET" },
+    @{ Id = "TSCSync"; Name = "TSC Sync Policy"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set tscsyncpolicy enhanced"; CommandOff = "bcdedit /deletevalue tscsyncpolicy"; Description = "Enhanced TSC synchronization" },
+    
+    # Gaming
+    @{ Id = "GameMode"; Name = "Enable Game Mode"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\Software\Microsoft\GameBar"; Key = "AllowAutoGameMode"; ValueOn = 1; ValueOff = 0; Description = "Windows Game Mode" },
+    @{ Id = "FSO"; Name = "Fullscreen Optimizations"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_FSEBehaviorMode"; ValueOn = 2; ValueOff = 0; Description = "Disable FSO for classic fullscreen" },
+    @{ Id = "GameBar"; Name = "Disable Game Bar"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\Software\Microsoft\GameBar"; Key = "UseNexusForGameBarEnabled"; ValueOn = 0; ValueOff = 1; Description = "Disable Xbox Game Bar overlay" },
+    @{ Id = "GameDVR"; Name = "Disable Game DVR"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_Enabled"; ValueOn = 0; ValueOff = 1; Description = "Disable background recording" },
+    
+    # Input
+    @{ Id = "MouseAccel"; Name = "Disable Mouse Acceleration"; Risk = "Low"; Category = "Input"; Path = "HKCU:\Control Panel\Mouse"; Key = "MouseSpeed"; ValueOn = "0"; ValueOff = "1"; Description = "Raw mouse input" },
+    @{ Id = "MouseHover"; Name = "Faster Tooltips"; Risk = "Low"; Category = "Input"; Path = "HKCU:\Control Panel\Mouse"; Key = "MouseHoverTime"; ValueOn = "10"; ValueOff = "400"; Description = "Faster tooltip display" },
+    
+    # Network
+    @{ Id = "TcpAck"; Name = "TCP ACK Frequency"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "TcpAckFrequency"; ValueOn = 1; ValueOff = 2; Description = "Immediate TCP ack" },
+    @{ Id = "NagleOff"; Name = "Disable Nagle"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "TcpNoDelay"; ValueOn = 1; ValueOff = 0; Description = "Disable packet buffering" },
+    @{ Id = "NetThrottle"; Name = "Disable Network Throttling"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "NetworkThrottlingIndex"; ValueOn = 0xffffffff; ValueOff = 10; Description = "Remove network throttling" },
+    
+    # UI Performance (from Perfect-Windows-11)
+    @{ Id = "MenuDelay"; Name = "Menu Show Delay"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop"; Key = "MenuShowDelay"; ValueOn = "0"; ValueOff = "400"; Description = "Instant menu display" },
+    @{ Id = "StartupDelay"; Name = "Startup Delay"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize"; Key = "StartupDelayInMSec"; ValueOn = 0; ValueOff = 500; Description = "Remove startup app delay" },
+    @{ Id = "ForegroundLock"; Name = "Foreground Lock Timeout"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop"; Key = "ForegroundLockTimeout"; ValueOn = 0; ValueOff = 200000; Description = "Faster window switching" },
+    
+    # === MEDIUM RISK TWEAKS ===
+    # Memory
+    @{ Id = "MemCompress"; Name = "Disable Memory Compression"; Risk = "Medium"; Category = "Memory"; CommandOn = "Disable-MMAgent -MemoryCompression"; CommandOff = "Enable-MMAgent -MemoryCompression"; Description = "Saves CPU on 16GB+ RAM" },
+    @{ Id = "LargePages"; Name = "Large System Pages"; Risk = "Medium"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "LargePageMinimum"; ValueOn = 1; ValueOff = 0; Description = "Enable large memory pages" },
+    
+    # Storage
+    @{ Id = "Prefetch"; Name = "Optimize Prefetch"; Risk = "Medium"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"; Key = "EnablePrefetcher"; ValueOn = 0; ValueOff = 3; Description = "Disable prefetch on SSD" },
+    @{ Id = "Superfetch"; Name = "Disable Superfetch"; Risk = "Medium"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"; Key = "EnableSuperfetch"; ValueOn = 0; ValueOff = 3; Description = "Disable superfetch on SSD" },
+    
+    # CPU/Scheduler
+    @{ Id = "SysResp"; Name = "System Responsiveness"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "SystemResponsiveness"; ValueOn = 0; ValueOff = 20; Description = "Prioritize foreground apps" },
+    @{ Id = "CoreParking"; Name = "Disable Core Parking"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583"; Key = "ValueMax"; ValueOn = 0; ValueOff = 100; Description = "Keep all cores active" },
+    @{ Id = "PowerThrottle"; Name = "Disable Power Throttling"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling"; Key = "PowerThrottlingOff"; ValueOn = 1; ValueOff = 0; Description = "Prevent CPU throttling" },
+    
+    # Shutdown/Startup
+    @{ Id = "WaitToKill"; Name = "Faster Shutdown"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "WaitToKillAppTimeout"; ValueOn = "2000"; ValueOff = "20000"; Description = "Reduce shutdown wait" },
+    @{ Id = "AutoEndTasks"; Name = "Auto End Tasks"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "AutoEndTasks"; ValueOn = "1"; ValueOff = "0"; Description = "Auto-kill hung apps" },
+    @{ Id = "HungAppTimeout"; Name = "Hung App Timeout"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "HungAppTimeout"; ValueOn = "1000"; ValueOff = "5000"; Description = "Faster hung app detection" },
+    
+    # Privacy/Telemetry (from Win11Debloat)
+    @{ Id = "Telemetry"; Name = "Disable Telemetry"; Risk = "Medium"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "AllowTelemetry"; ValueOn = 0; ValueOff = 3; Description = "Disable data collection" }
+)
+
+# Persistent State Management
 function Get-NeuralBrain {
     if (Test-Path $Script:BrainPath) {
-        try {
-            return Get-Content $Script:BrainPath -Raw | ConvertFrom-Json
-        }
-        catch {
-            return @{ History = @() }
-        }
+        try { return Get-Content $Script:BrainPath -Raw | ConvertFrom-Json }
+        catch { return @{ History = @(); Stats = @{} } }
     }
-    # Future expansion: Cloud AI integration
-    # For now, local logic only
-    return @{ History = @() }
+    return @{ History = @(); Stats = @{} }
 }
 
 function Save-NeuralBrain {
     param($Data)
-    try {
-        $Data | ConvertTo-Json -Depth 5 | Set-Content $Script:BrainPath -Force
-    }
-    catch {
-        Write-Host " [!] Error saving AI Brain: $_" -ForegroundColor Red
-    }
+    try { $Data | ConvertTo-Json -Depth 10 | Set-Content $Script:BrainPath -Force -Encoding UTF8 }
+    catch { Write-Host " [!] Error saving AI Brain: $_" -ForegroundColor Red }
 }
 
+function Get-QTable {
+    if (Test-Path $Script:QTablePath) {
+        try {
+            $json = Get-Content $Script:QTablePath -Raw | ConvertFrom-Json
+            $table = @{}
+            $json.PSObject.Properties | ForEach-Object {
+                $table[$_.Name] = @{}
+                if ($_.Value) {
+                    $_.Value.PSObject.Properties | ForEach-Object { $table[$_.Name][$_.Name] = $_.Value }
+                }
+            }
+            return $table
+        }
+        catch { return @{} }
+    }
+    return @{}
+}
+
+function Save-QTable {
+    param($QTable)
+    try { $QTable | ConvertTo-Json -Depth 5 | Set-Content $Script:QTablePath -Force -Encoding UTF8 }
+    catch { Write-Host " [!] Error saving Q-Table: $_" -ForegroundColor Red }
+}
+
+function Get-NeuralConfig {
+    if (Test-Path $Script:ConfigPath) {
+        try { return Get-Content $Script:ConfigPath -Raw | ConvertFrom-Json }
+        catch { return @{ Epsilon = $Script:QLearningConfig.EpsilonInitial; LearningCycles = 0 } }
+    }
+    return @{ Epsilon = $Script:QLearningConfig.EpsilonInitial; LearningCycles = 0 }
+}
+
+function Save-NeuralConfig {
+    param($Config)
+    try { $Config | ConvertTo-Json | Set-Content $Script:ConfigPath -Force -Encoding UTF8 }
+    catch { }
+}
+
+# Expanded Metrics Collection
 function Measure-SystemMetrics {
     param([int]$DurationSeconds = 5)
     
-    Write-Host "   [AI] Measuring System Latency & Stability..." -ForegroundColor Cyan
+    Write-Host "   [AI] Measuring System Metrics (Extended)..." -ForegroundColor Cyan
+    
+    $metrics = @{
+        DpcTime       = 0
+        InterruptTime = 0
+        ContextSwitch = 0
+        GpuUsage      = 0
+        DiskQueue     = 0
+        NetworkPing   = 0
+        CpuTemp       = 0
+        Score         = 50
+        Timestamp     = Get-Date
+    }
     
     try {
-        # Added Context Switches to detect thrashing
         $counters = @(
             "\Processor(_Total)\% DPC Time", 
             "\Processor(_Total)\% Interrupt Time",
-            "\System\Context Switches/sec"
+            "\System\Context Switches/sec",
+            "\PhysicalDisk(_Total)\Current Disk Queue Length"
         )
-        
         $samples = Get-Counter -Counter $counters -SampleInterval 1 -MaxSamples $DurationSeconds -ErrorAction Stop
+        $metrics.DpcTime = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "dpc" } | Measure-Object -Property CookedValue -Average).Average, 4)
+        $metrics.InterruptTime = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "interrupt" } | Measure-Object -Property CookedValue -Average).Average, 4)
+        $metrics.ContextSwitch = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "context" } | Measure-Object -Property CookedValue -Average).Average, 0)
+        $metrics.DiskQueue = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "queue" } | Measure-Object -Property CookedValue -Average).Average, 2)
+    }
+    catch { Write-Host "   [!] Core counters unavailable" -ForegroundColor Yellow }
     
-        $avgDpc = ($samples.CounterSamples | Where-Object Path -match "dpc" | Measure-Object -Property CookedValue -Average).Average
-        $avgInt = ($samples.CounterSamples | Where-Object Path -match "interrupt" | Measure-Object -Property CookedValue -Average).Average
-        $avgCtx = ($samples.CounterSamples | Where-Object Path -match "context" | Measure-Object -Property CookedValue -Average).Average
-        
-        # Penalize Context Switches (Thrashing detection)
-        # Normal desktop might have 500-2000. Gaming/Stress > 5000.
-        # Penalty: -1 point for every 1000 switches over 3000 baseline? Smart heuristic needed.
-        $ctxPenalty = 0
-        if ($avgCtx -gt 5000) {
-            $ctxPenalty = [math]::Round(($avgCtx - 5000) / 1000, 2)
-        }
-        
-        # Base Score
-        $rawScore = 100 - ($avgDpc + $avgInt) - $ctxPenalty
-        if ($rawScore -lt 0) { $rawScore = 0 }
-
-        return [PSCustomObject]@{
-            DpcTime       = [math]::Round($avgDpc, 4)
-            InterruptTime = [math]::Round($avgInt, 4)
-            ContextSwitch = [math]::Round($avgCtx, 0)
-            Score         = [math]::Round($rawScore, 2) # Higher is better
+    try {
+        $ping = Test-Connection -ComputerName "8.8.8.8" -Count 2 -ErrorAction Stop
+        $metrics.NetworkPing = [math]::Round(($ping.ResponseTime | Measure-Object -Average).Average, 0)
+    }
+    catch { $metrics.NetworkPing = 999 }
+    
+    try {
+        $temp = Get-CimInstance -Namespace root\WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction Stop
+        if ($temp) {
+            $kelvin = ($temp.CurrentTemperature | Measure-Object -Average).Average
+            $metrics.CpuTemp = [math]::Round(($kelvin / 10) - 273.15, 1)
         }
     }
-    catch {
-        Write-Host "   [!] Failed to measure metrics (PerfCounters might be disabled). Assuming neutral score." -ForegroundColor Yellow
-        return [PSCustomObject]@{ DpcTime = 0; InterruptTime = 0; ContextSwitch = 0; Score = 50 } # Neutral score
-    }
+    catch { $metrics.CpuTemp = 0 }
+    
+    $metrics.Score = Get-CompositeScore -Metrics $metrics
+    return [PSCustomObject]$metrics
 }
 
+function Get-CompositeScore {
+    param($Metrics)
+    $score = 100
+    if ($Metrics.DpcTime -gt 1) { $score -= ($Metrics.DpcTime - 1) * 5 }
+    if ($Metrics.InterruptTime -gt 1) { $score -= ($Metrics.InterruptTime - 1) * 3 }
+    if ($Metrics.ContextSwitch -gt 5000) { $score -= [math]::Min(20, ($Metrics.ContextSwitch - 5000) / 500) }
+    if ($Metrics.DiskQueue -gt 2) { $score -= ($Metrics.DiskQueue - 2) * 3 }
+    if ($Metrics.NetworkPing -gt 20) { $score -= [math]::Min(10, ($Metrics.NetworkPing - 20) / 10) }
+    if ($Metrics.CpuTemp -gt 75) { $score -= ($Metrics.CpuTemp - 75) * 2 }
+    return [math]::Max(0, [math]::Min(100, [math]::Round($score, 2)))
+}
+
+# Q-Learning Engine
+function Get-CurrentState {
+    param($Hardware, $Workload)
+    $hour = (Get-Date).Hour
+    $timeSlot = switch ($hour) {
+        { $_ -ge 6 -and $_ -lt 12 } { "Morning" }
+        { $_ -ge 12 -and $_ -lt 18 } { "Afternoon" }
+        { $_ -ge 18 -and $_ -lt 23 } { "Evening" }
+        default { "Night" }
+    }
+    $tier = if ($Hardware.PerformanceTier) { $Hardware.PerformanceTier } else { "Standard" }
+    $work = if ($Workload) { $Workload } else { "General" }
+    return "$tier|$work|$timeSlot"
+}
+
+function Get-AvailableActions {
+    param([string]$RiskLevel = "Low")
+    $actions = @()
+    foreach ($tweak in $Script:TweakLibrary) {
+        if ($RiskLevel -eq "All" -or $tweak.Risk -eq $RiskLevel -or ($RiskLevel -eq "Medium" -and $tweak.Risk -eq "Low")) {
+            $actions += $tweak.Id
+        }
+    }
+    return $actions
+}
+
+function Get-QValue {
+    param($QTable, $State, $Action)
+    if ($QTable.ContainsKey($State) -and $QTable[$State].ContainsKey($Action)) { return $QTable[$State][$Action] }
+    return 0.0
+}
+
+function Set-QValue {
+    param($QTable, $State, $Action, $Value)
+    if (-not $QTable.ContainsKey($State)) { $QTable[$State] = @{} }
+    $QTable[$State][$Action] = $Value
+}
+
+function Select-Action {
+    param($QTable, $State, $AvailableActions, $Epsilon)
+    if ($AvailableActions.Count -eq 0) { return $null }
+    if ((Get-Random -Minimum 0.0 -Maximum 1.0) -lt $Epsilon) { return $AvailableActions | Get-Random }
+    $bestAction = $null
+    $bestValue = [double]::MinValue
+    foreach ($action in $AvailableActions) {
+        $value = Get-QValue -QTable $QTable -State $State -Action $action
+        if ($value -gt $bestValue) { $bestValue = $value; $bestAction = $action }
+    }
+    if ($null -eq $bestAction) { return $AvailableActions | Get-Random }
+    return $bestAction
+}
+
+function Update-QValue {
+    param($QTable, $State, $Action, $Reward, $NewState, $AvailableActions)
+    $alpha = $Script:QLearningConfig.Alpha
+    $gamma = $Script:QLearningConfig.Gamma
+    $currentQ = Get-QValue -QTable $QTable -State $State -Action $Action
+    $maxNewQ = 0
+    foreach ($a in $AvailableActions) {
+        $q = Get-QValue -QTable $QTable -State $NewState -Action $a
+        if ($q -gt $maxNewQ) { $maxNewQ = $q }
+    }
+    $newQ = $currentQ + $alpha * ($Reward + $gamma * $maxNewQ - $currentQ)
+    Set-QValue -QTable $QTable -State $State -Action $Action -Value $newQ
+}
+
+# Tweak Application
+function Invoke-Tweak {
+    param([string]$TweakId, [switch]$Apply, [switch]$Revert)
+    $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $TweakId }
+    if (-not $tweak) { Write-Host "   [!] Tweak not found: $TweakId" -ForegroundColor Red; return $false }
+    $value = if ($Apply) { $tweak.ValueOn } else { $tweak.ValueOff }
+    $command = if ($Apply) { $tweak.CommandOn } else { $tweak.CommandOff }
+    try {
+        if ($tweak.Path) {
+            if (-not (Test-Path $tweak.Path)) { New-Item -Path $tweak.Path -Force | Out-Null }
+            Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $value -Force
+        }
+        elseif ($command) { Invoke-Expression $command 2>&1 | Out-Null }
+        return $true
+    }
+    catch { Write-Host "   [!] Failed: $_" -ForegroundColor Red; return $false }
+}
+
+# Main Learning Cycle
 function Invoke-NeuralLearning {
-    param(
-        [string]$ProfileName,
-        [object]$Hardware
-    )
+    param([string]$ProfileName, [object]$Hardware, [string]$Workload = "General")
     
-    Write-Section "NEURAL LEARNING CYCLE (RL)"
+    Write-Section "NEURAL Q-LEARNING CYCLE v2.0"
     
-    # 1. Measure Effect
-    $metrics = Measure-SystemMetrics -DurationSeconds 5
-    
-    Write-Host "   [RESULT] DPC Latency:     $($metrics.DpcTime)%" -ForegroundColor Green
-    Write-Host "   [RESULT] Interrupts:      $($metrics.InterruptTime)%" -ForegroundColor Green
-    Write-Host "   [RESULT] Context Switch:  $($metrics.ContextSwitch)/sec" -ForegroundColor Green
-    Write-Host "   [SCORE]  Optimization Score: $($metrics.Score)/100" -ForegroundColor Cyan
-    
-    # 2. Update Brain
+    $config = Get-NeuralConfig
+    $qTable = Get-QTable
     $brain = Get-NeuralBrain
-    # Convert PSCustomObject to Hashtable if needed for JSON manipulation, or just append
-    if (-not $brain.History) { $brain = @{ History = @() } }
+    $epsilon = if ($config.Epsilon) { $config.Epsilon } else { $Script:QLearningConfig.EpsilonInitial }
     
-    # Create Record
+    $state = Get-CurrentState -Hardware $Hardware -Workload $Workload
+    Write-Host "   [STATE] $state" -ForegroundColor Gray
+    Write-Host "   [e] Exploration Rate: $([math]::Round($epsilon * 100, 1))%" -ForegroundColor Gray
+    
+    Write-Host ""
+    Write-Host "   [AI] Measuring Baseline..." -ForegroundColor Cyan
+    $baselineMetrics = Measure-SystemMetrics -DurationSeconds 3
+    $baselineScore = $baselineMetrics.Score
+    Write-Host "   [BASELINE] Score: $baselineScore/100" -ForegroundColor Yellow
+    
+    $availableActions = Get-AvailableActions -RiskLevel "Low"
+    $selectedAction = Select-Action -QTable $qTable -State $state -AvailableActions $availableActions -Epsilon $epsilon
+    
+    $newScore = $baselineScore
+    $reward = 0
+    
+    if ($selectedAction) {
+        $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $selectedAction }
+        Write-Host ""
+        Write-Host "   [ACTION] Selected: $($tweak.Name) ($selectedAction)" -ForegroundColor Magenta
+        
+        $applied = Invoke-Tweak -TweakId $selectedAction -Apply
+        if ($applied) {
+            Start-Sleep -Seconds 2
+            Write-Host "   [AI] Measuring Impact..." -ForegroundColor Cyan
+            $newMetrics = Measure-SystemMetrics -DurationSeconds 3
+            $newScore = $newMetrics.Score
+            $reward = $newScore - $baselineScore
+            
+            Write-Host ""
+            if ($reward -gt 0) { Write-Host "   [RESULT] Score: $newScore (+$reward) IMPROVEMENT" -ForegroundColor Green }
+            elseif ($reward -lt 0) {
+                Write-Host "   [RESULT] Score: $newScore ($reward) REGRESSION" -ForegroundColor Red
+                Write-Host "   [AI] Reverting tweak..." -ForegroundColor Yellow
+                Invoke-Tweak -TweakId $selectedAction -Revert | Out-Null
+            }
+            else { Write-Host "   [RESULT] Score: $newScore - NO CHANGE" -ForegroundColor Gray }
+            
+            Update-QValue -QTable $qTable -State $state -Action $selectedAction -Reward $reward -NewState $state -AvailableActions $availableActions
+            Save-QTable -QTable $qTable
+            
+            $epsilon = [math]::Max($Script:QLearningConfig.EpsilonMin, $epsilon * $Script:QLearningConfig.EpsilonDecay)
+            $config.Epsilon = $epsilon
+            $config.LearningCycles = ($config.LearningCycles -as [int]) + 1
+            Save-NeuralConfig -Config $config
+        }
+    }
+    else { Write-Host "   [AI] No suitable actions available" -ForegroundColor Yellow }
+    
+    if (-not $brain.History) { $brain = @{ History = @(); Stats = @{} } }
     $record = @{
-        Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-        Hardware  = $Hardware.CpuName
-        Tier      = $Hardware.PerformanceTier
-        Profile   = $ProfileName
-        Score     = $metrics.Score
-        Metrics   = $metrics
+        Timestamp     = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        Hardware      = if ($Hardware.CpuName) { $Hardware.CpuName } else { "Unknown" }
+        Tier          = if ($Hardware.PerformanceTier) { $Hardware.PerformanceTier } else { "Standard" }
+        Profile       = $ProfileName
+        Workload      = $Workload
+        State         = $state
+        Action        = $selectedAction
+        BaselineScore = $baselineScore
+        FinalScore    = $newScore
+        Reward        = $reward
+        Metrics       = $baselineMetrics
     }
-    
-    # Append (PowerShell arrays are fixed size, so needs +=)
-    $history = $brain.History 
-    if ($history -is [System.Array]) {
-        $history += $record
-    }
-    else {
-        $history = @($record)
-    }
-    
-    $brain.History = $history
+    $history = @($brain.History) + $record
+    $brain.History = $history | Select-Object -Last 100
     Save-NeuralBrain -Data $brain
     
-    # 3. Insight
-    $bestRun = $history | Sort-Object Score -Descending | Select-Object -First 1
-    if ($bestRun) {
-        Write-Host "   [INSIGHT] Best recorded run: $($bestRun.Score) (Profile: $($bestRun.Profile))" -ForegroundColor Magenta
+    Write-Host ""
+    Show-QLearningInsights -QTable $qTable -State $state
+}
+
+function Show-QLearningInsights {
+    param($QTable, $State)
+    Write-Host "   === Q-LEARNING INSIGHTS ===" -ForegroundColor Cyan
+    if ($QTable.ContainsKey($State)) {
+        $stateActions = $QTable[$State]
+        Write-Host "   Top actions for state [$State]:" -ForegroundColor Gray
+        $stateActions.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 5 | ForEach-Object {
+            $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $_.Name }
+            $color = if ($_.Value -gt 0) { "Green" } elseif ($_.Value -lt 0) { "Red" } else { "Gray" }
+            Write-Host "     $($_.Name): Q=$([math]::Round($_.Value, 3))" -ForegroundColor $color
+        }
     }
-    
-    # 4. Active Exploration
-    if ($metrics.Score -lt 80 -and -not $brain.ExplorationLock) {
-        Write-Host "   [AI] Score below threshold (80). Triggering Active Exploration..." -ForegroundColor Yellow
-        Invoke-ExploratoryTweak -CurrentScore $metrics.Score
+    else { Write-Host "   No learned actions for current state yet." -ForegroundColor Yellow }
+    $config = Get-NeuralConfig
+    Write-Host "   Total Learning Cycles: $($config.LearningCycles)" -ForegroundColor DarkGray
+}
+
+# Recommendations
+function Get-NeuralRecommendation {
+    param($Hardware, $Workload = "General")
+    $qTable = Get-QTable
+    $state = Get-CurrentState -Hardware $Hardware -Workload $Workload
+    if (-not $qTable.ContainsKey($state)) { return $null }
+    $stateActions = $qTable[$state]
+    $bestAction = $stateActions.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1
+    if ($bestAction -and $bestAction.Value -gt 0) {
+        $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $bestAction.Name }
+        return [PSCustomObject]@{
+            RecommendedAction = $bestAction.Name
+            ActionName        = if ($tweak) { $tweak.Name } else { $bestAction.Name }
+            Confidence        = [math]::Min(100, [math]::Round(50 + $bestAction.Value * 5, 0))
+            Reason            = "Best tweak based on Q-Learning (Q=$([math]::Round($bestAction.Value, 3)))"
+            Risk              = if ($tweak) { $tweak.Risk } else { "Unknown" }
+        }
     }
+    return $null
+}
+
+function Get-BestTweaksForState {
+    param($Hardware, $Workload = "General", $TopN = 5)
+    $qTable = Get-QTable
+    $state = Get-CurrentState -Hardware $Hardware -Workload $Workload
+    $recommendations = @()
+    if ($qTable.ContainsKey($state)) {
+        $stateActions = $qTable[$state]
+        $stateActions.GetEnumerator() | Where-Object { $_.Value -gt 0 } | Sort-Object Value -Descending | Select-Object -First $TopN | ForEach-Object {
+            $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $_.Name }
+            $recommendations += [PSCustomObject]@{
+                TweakId     = $_.Name
+                Name        = if ($tweak) { $tweak.Name } else { $_.Name }
+                Category    = if ($tweak) { $tweak.Category } else { "Unknown" }
+                QValue      = [math]::Round($_.Value, 3)
+                Risk        = if ($tweak) { $tweak.Risk } else { "Unknown" }
+                Description = if ($tweak) { $tweak.Description } else { "" }
+            }
+        }
+    }
+    return $recommendations
 }
 
 function Invoke-ExploratoryTweak {
     param($CurrentScore)
-    
-    # Valid tweaks to test
-    $tweaks = @(
-        @{ Name = "TimerRes"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"; Key = "GlobalTimerResolutionRequests"; Vald = 1; ValOriginal = 0 },
-        @{ Name = "DynamicTick"; Command = "bcdedit /set disabledynamictick yes"; Rollback = "bcdedit /set disabledynamictick no" }
-    )
-    
-    # Simple Random Choice for now (can be smarter)
-    $tweak = $tweaks | Get-Random
-    
-    Write-Host "   [AI-EXPLORE] Testing Tweak: $($tweak.Name)" -ForegroundColor Magenta
-    
-    # Apply
-    if ($tweak.Command) { cmd /c $tweak.Command | Out-Null }
-    if ($tweak.Path) { Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $tweak.Vald -Force -ErrorAction SilentlyContinue }
-    
-    # Measure Immediate Impact (Quick 3s test)
-    Start-Sleep -Seconds 1
-    $newMetrics = Measure-SystemMetrics -DurationSeconds 3
-    
-    if ($newMetrics.Score -gt $CurrentScore) {
-        Write-Host "   [AI-EXPLORE] SUCCESS! New Score: $($newMetrics.Score) (+$($newMetrics.Score - $CurrentScore)). Keeping change." -ForegroundColor Green
-        # Log success to brain?
-    }
-    else {
-        Write-Host "   [AI-EXPLORE] No improvement ($($newMetrics.Score)). Rolling back." -ForegroundColor DarkGray
-        # Revert
-        if ($tweak.Rollback) { cmd /c $tweak.Rollback | Out-Null }
-        if ($tweak.Path) { Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $tweak.ValOriginal -Force -ErrorAction SilentlyContinue }
-    }
+    Write-Host "   [AI] Exploration is now integrated into Q-Learning cycle" -ForegroundColor Cyan
+    Write-Host "   [AI] Run Invoke-NeuralLearning for adaptive exploration" -ForegroundColor Gray
 }
 
-function Get-NeuralRecommendation {
-    param($Hardware)
-    
-    $brain = Get-NeuralBrain
-    if (-not $brain.History) { 
-        return $null 
-    }
-    
-    # 1. Filter history for this CPU
-    $history = $brain.History | Where-Object { $_.Hardware -eq $Hardware.CpuName }
-    if (-not $history) { return $null }
-
-    # 2. Find the best scoring profile
-    # We group by profile and average the score to avoid outliers
-    $stats = $history | Group-Object Profile | Select-Object Name, @{N = 'AvgScore'; E = { ($_.Group | Measure-Object Score -Average).Average } } | Sort-Object AvgScore -Descending
-    
-    $best = $stats | Select-Object -First 1
-    
-    if ($best) {
-        Write-Host "   [AI] Recommendation: Found historical best override ($($best.Name))" -ForegroundColor Magenta
-        return [PSCustomObject]@{
-            RecommendedProfile = $best.Name
-            Confidence         = $best.AvgScore
-            Reason             = "Based on historical average performance"
-        }
-    }
-    
-    return $null
-}
-
-Export-ModuleMember -Function Invoke-NeuralLearning, Get-NeuralRecommendation, Get-NeuralBrain
+Export-ModuleMember -Function @(
+    'Invoke-NeuralLearning',
+    'Get-NeuralRecommendation', 
+    'Get-NeuralBrain',
+    'Measure-SystemMetrics',
+    'Get-BestTweaksForState',
+    'Get-QTable',
+    'Invoke-ExploratoryTweak'
+)

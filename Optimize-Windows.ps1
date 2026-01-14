@@ -244,6 +244,11 @@ function Show-AdvancedMenu {
     Write-Host " ║ 12. Update Manager (Defer, Pause, Block Drivers)      ║" -ForegroundColor Green
     Write-Host " ║ 13. UI Preferences (Context Menu, Themes)             ║" -ForegroundColor Green
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ [AI & NEURAL v6.1]                                    ║" -ForegroundColor Magenta
+    Write-Host " ║ 18. Neural AI Dashboard (Q-Learning Stats)            ║" -ForegroundColor Magenta
+    Write-Host " ║ 19. Lenovo Optimization (Thermal Profiles)            ║" -ForegroundColor Magenta
+    Write-Host " ║ 20. AI Recommendations (Smart Analysis)               ║" -ForegroundColor Magenta
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
     Write-Host " ║ [TOOLS]                                               ║" -ForegroundColor White
     Write-Host " ║ 14. System Monitor                                    ║" -ForegroundColor White
     Write-Host " ║ 15. Network Diagnostics                               ║" -ForegroundColor White
@@ -358,6 +363,22 @@ if (-not $SkipRestore) {
     }
 }
 
+# ============================================================================
+# STARTUP UPDATE CHECK
+# ============================================================================
+
+$updateCheckerPath = Join-Path $Script:ModuleDir "Update-Checker.ps1"
+if (Test-Path $updateCheckerPath) {
+    try {
+        . $updateCheckerPath
+        Invoke-StartupUpdateCheck
+    }
+    catch {
+        Write-Host " [i] Update check skipped: $_" -ForegroundColor DarkGray
+    }
+}
+
+
 # Main loop
 # ============================================================================
 # MAIN LOOP
@@ -419,6 +440,20 @@ while ($true) {
                         catch {
                             Write-Host " [X] Error reparando Store: $_" -ForegroundColor Red
                         }
+                        Wait-ForKeyPress
+                    }
+                    '18' { 
+                        # Neural AI Dashboard
+                        Invoke-OptimizationModule -Name 'NEURAL-DASHBOARD' -ScriptPath (Join-Path $Script:ModuleDir "Neural-Dashboard.ps1")
+                    }
+                    '19' { 
+                        # Lenovo Optimization
+                        Invoke-OptimizationModule -Name 'LENOVO' -ScriptPath (Join-Path $Script:ModuleDir "Lenovo-Optimization.ps1")
+                        Wait-ForKeyPress
+                    }
+                    '20' { 
+                        # AI Recommendations
+                        Invoke-OptimizationModule -Name 'AI-RECOMMENDATIONS' -ScriptPath (Join-Path $Script:ModuleDir "AI-Recommendations.ps1")
                         Wait-ForKeyPress
                     }
                     default { Write-Host "Invalid Option" -ForegroundColor Red; Start-Sleep 1 }

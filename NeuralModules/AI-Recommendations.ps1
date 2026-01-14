@@ -398,6 +398,17 @@ function Get-SmartRecommendations {
     # Registry Status (Phase 3)
     $recommendations += Get-RegistryOptimizationStatus
     
+    # === AI ANALYTICS v2.0 ===
+    
+    # Q-Learning based recommendations
+    $recommendations += Get-QLearningRecommendations
+    
+    # Performance regression detection
+    $recommendations += Get-RegressionRecommendations
+    
+    # Tweak correlation analysis
+    $recommendations += Get-TweakCorrelationRecommendations
+    
     # Sort by priority
     $recommendations = $recommendations | Sort-Object -Property Priority -Descending
     
@@ -909,6 +920,285 @@ function Show-Recommendations {
 # ============================================================================
 # MAIN
 # ============================================================================
+
+# ============================================================================
+# ADVANCED AI ANALYTICS (v2.0)
+# ============================================================================
+
+function Get-PerformanceRegression {
+    <#
+    .SYNOPSIS
+        Detects performance regression by comparing current score to historical baseline.
+    #>
+    
+    $brainPath = Join-Path $PSScriptRoot "..\NeuralBrain.json"
+    
+    if (-not (Test-Path $brainPath)) {
+        return $null
+    }
+    
+    try {
+        $brain = Get-Content $brainPath -Raw | ConvertFrom-Json
+        
+        if (-not $brain.History -or $brain.History.Count -lt 5) {
+            return $null
+        }
+        
+        $history = $brain.History
+        
+        # Calculate baseline from last 7 days (older records)
+        $recentCount = [math]::Min(10, $history.Count)
+        $olderCount = [math]::Min(20, $history.Count)
+        
+        $recentScores = @($history | Select-Object -Last $recentCount | ForEach-Object {
+                if ($_.FinalScore) { $_.FinalScore } elseif ($_.Score) { $_.Score } else { 50 }
+            })
+        
+        $olderScores = @($history | Select-Object -First $olderCount | ForEach-Object {
+                if ($_.FinalScore) { $_.FinalScore } elseif ($_.Score) { $_.Score } else { 50 }
+            })
+        
+        $recentAvg = ($recentScores | Measure-Object -Average).Average
+        $olderAvg = ($olderScores | Measure-Object -Average).Average
+        
+        $delta = $recentAvg - $olderAvg
+        
+        $regression = @{
+            HasRegression   = $false
+            Delta           = [math]::Round($delta, 2)
+            RecentAverage   = [math]::Round($recentAvg, 2)
+            BaselineAverage = [math]::Round($olderAvg, 2)
+            Severity        = "None"
+            Message         = ""
+        }
+        
+        if ($delta -lt -5) {
+            $regression.HasRegression = $true
+            $regression.Severity = if ($delta -lt -15) { "Critical" } elseif ($delta -lt -10) { "High" } else { "Medium" }
+            $regression.Message = "Score promedio cayó de $($regression.BaselineAverage) a $($regression.RecentAverage)"
+        }
+        elseif ($delta -gt 5) {
+            $regression.Severity = "Improvement"
+            $regression.Message = "Score mejoró de $($regression.BaselineAverage) a $($regression.RecentAverage)"
+        }
+        
+        return $regression
+    }
+    catch {
+        return $null
+    }
+}
+
+function Get-TweakCorrelation {
+    <#
+    .SYNOPSIS
+        Analyzes which tweaks have historically improved scores.
+    .DESCRIPTION
+        Returns ranked list of tweaks by their average impact on scores.
+    #>
+    
+    $brainPath = Join-Path $PSScriptRoot "..\NeuralBrain.json"
+    
+    if (-not (Test-Path $brainPath)) {
+        return @()
+    }
+    
+    try {
+        $brain = Get-Content $brainPath -Raw | ConvertFrom-Json
+        
+        if (-not $brain.History -or $brain.History.Count -lt 5) {
+            return @()
+        }
+        
+        $history = $brain.History | Where-Object { $_.Action }
+        
+        if ($history.Count -eq 0) {
+            return @()
+        }
+        
+        # Group by Action and calculate average reward
+        $correlations = $history | Group-Object Action | ForEach-Object {
+            $rewards = $_.Group | ForEach-Object { 
+                if ($_.Reward) { $_.Reward } else { 0 }
+            }
+            
+            $avgReward = ($rewards | Measure-Object -Average).Average
+            $count = $_.Count
+            $successRate = ($rewards | Where-Object { $_ -gt 0 }).Count / $count * 100
+            
+            [PSCustomObject]@{
+                TweakId     = $_.Name
+                AvgReward   = [math]::Round($avgReward, 3)
+                TotalTests  = $count
+                SuccessRate = [math]::Round($successRate, 1)
+                Reliability = if ($count -ge 5) { "High" } elseif ($count -ge 3) { "Medium" } else { "Low" }
+            }
+        } | Sort-Object AvgReward -Descending
+        
+        return $correlations
+    }
+    catch {
+        return @()
+    }
+}
+
+function Get-QLearningRecommendations {
+    <#
+    .SYNOPSIS
+        Gets recommendations based on Q-Learning table if available.
+    #>
+    
+    $qTablePath = Join-Path $PSScriptRoot "..\NeuralQTable.json"
+    $recommendations = @()
+    
+    if (-not (Test-Path $qTablePath)) {
+        return $recommendations
+    }
+    
+    try {
+        $qt = Get-Content $qTablePath -Raw | ConvertFrom-Json
+        
+        # Find best actions across all states
+        $allActions = @()
+        
+        $qt.PSObject.Properties | ForEach-Object {
+            $state = $_.Name
+            $_.Value.PSObject.Properties | ForEach-Object {
+                $allActions += [PSCustomObject]@{
+                    State  = $state
+                    Action = $_.Name
+                    QValue = $_.Value
+                }
+            }
+        }
+        
+        $topActions = $allActions | Where-Object { $_.QValue -gt 0 } | Sort-Object QValue -Descending | Select-Object -First 3
+        
+        foreach ($action in $topActions) {
+            $recommendations += @{
+                Title       = "🧠 AI Sugiere: $($action.Action)"
+                Description = "La IA aprendió que '$($action.Action)' mejora el rendimiento (Q=$([math]::Round($action.QValue, 3))) en contexto $($action.State)"
+                Action      = "Aplicar automáticamente via Neural-Dashboard o Smart-Optimizer"
+                Priority    = [math]::Min(95, 60 + $action.QValue * 10)
+                Risk        = "Low"
+                Impact      = "AI-Learned"
+                Category    = "Q-Learning"
+                Module      = $null
+            }
+        }
+        
+        # Add warnings for negative Q-value actions
+        $worstActions = $allActions | Where-Object { $_.QValue -lt -1 } | Select-Object -First 2
+        
+        foreach ($action in $worstActions) {
+            $recommendations += @{
+                Title       = "⚠️ Evitar: $($action.Action)"
+                Description = "La IA detectó que '$($action.Action)' EMPEORA el rendimiento (Q=$([math]::Round($action.QValue, 3)))"
+                Action      = "Verificar que este tweak NO esté aplicado"
+                Priority    = 70
+                Risk        = "Info"
+                Impact      = "AI-Warning"
+                Category    = "Q-Learning"
+                Module      = $null
+            }
+        }
+    }
+    catch {}
+    
+    return $recommendations
+}
+
+function Get-RegressionRecommendations {
+    <#
+    .SYNOPSIS
+        Generates recommendations based on performance regression detection.
+    #>
+    
+    $recommendations = @()
+    $regression = Get-PerformanceRegression
+    
+    if ($regression -and $regression.HasRegression) {
+        $recommendations += @{
+            Title       = "📉 Regresión de Rendimiento Detectada"
+            Description = "$($regression.Message). Severidad: $($regression.Severity)."
+            Action      = "Ejecutar Neural-Dashboard.ps1 → Ver tendencia y optimizar"
+            Priority    = switch ($regression.Severity) {
+                "Critical" { 100 }
+                "High" { 90 }
+                "Medium" { 75 }
+                default { 60 }
+            }
+            Risk        = "Low"
+            Impact      = "Critical"
+            Category    = "AI-Regression"
+            Module      = "Neural-Dashboard.ps1"
+        }
+        
+        # Suggest specific actions based on severity
+        if ($regression.Severity -eq "Critical") {
+            $recommendations += @{
+                Title       = "🔧 Restaurar Punto Óptimo"
+                Description = "Considera restaurar un backup de configuración anterior o reiniciar Q-Learning."
+                Action      = "Verificar cambios recientes del sistema"
+                Priority    = 85
+                Risk        = "Medium"
+                Impact      = "High"
+                Category    = "AI-Regression"
+                Module      = $null
+            }
+        }
+    }
+    
+    return $recommendations
+}
+
+function Get-TweakCorrelationRecommendations {
+    <#
+    .SYNOPSIS
+        Recommends applying best-performing tweaks based on correlation analysis.
+    #>
+    
+    $recommendations = @()
+    $correlations = Get-TweakCorrelation
+    
+    if ($correlations.Count -eq 0) {
+        return $recommendations
+    }
+    
+    # Recommend top performing tweaks that aren't currently applied
+    $topTweaks = $correlations | Where-Object { $_.AvgReward -gt 0 -and $_.Reliability -ne "Low" } | Select-Object -First 2
+    
+    foreach ($tweak in $topTweaks) {
+        $recommendations += @{
+            Title       = "⭐ Tweak Comprobado: $($tweak.TweakId)"
+            Description = "Históricamente mejora el score (Reward promedio: $($tweak.AvgReward), Success: $($tweak.SuccessRate)%, Pruebas: $($tweak.TotalTests))"
+            Action      = "Verificar que esté aplicado permanentemente"
+            Priority    = 65
+            Risk        = "Low"
+            Impact      = "Proven"
+            Category    = "AI-Correlation"
+            Module      = $null
+        }
+    }
+    
+    # Warn about consistently bad tweaks
+    $badTweaks = $correlations | Where-Object { $_.AvgReward -lt 0 -and $_.TotalTests -ge 2 } | Select-Object -First 1
+    
+    foreach ($tweak in $badTweaks) {
+        $recommendations += @{
+            Title       = "⚠️ Tweak Problemático: $($tweak.TweakId)"
+            Description = "Este tweak ha empeorado el rendimiento ($($tweak.SuccessRate)% éxito en $($tweak.TotalTests) pruebas)"
+            Action      = "Evitar o revertir este tweak"
+            Priority    = 60
+            Risk        = "Info"
+            Impact      = "Warning"
+            Category    = "AI-Correlation"
+            Module      = $null
+        }
+    }
+    
+    return $recommendations
+}
 
 # ============================================================================
 # REGISTRY HEURISTICS

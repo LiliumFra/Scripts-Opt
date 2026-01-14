@@ -1,110 +1,307 @@
-# 🚀 Windows Neural Optimizer v6.0 ULTRA
+# 🚀 Windows Neural Optimizer v6.1 ULTRA
 
 > **Next-Gen System Optimization Suite for Windows 10/11**  
-> *Developed by **Jose Bustamante** | Powered by Neural Modules & Smart Localization*
+> *Developed by **Jose Bustamante** | Powered by Neural AI & Q-Learning*
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?style=for-the-badge&logo=powershell)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-6.0_ULTRA-purple?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-6.1_ULTRA-purple?style=for-the-badge)
+
+---
 
 ## 🌟 Overview
 
-**Windows Neural Optimizer v6.0 ULTRA** is a massive leap forward in system optimization. Beyond standard tweaks, it introduces an **AI-driven Recommendation Engine**, **Machine Learning Usage Analysis**, and a **Safety-First Registry System**. It now natively supports **English and Spanish** (auto-detected), making high-performance computing accessible to more users.
+**Windows Neural Optimizer v6.1 ULTRA** is a comprehensive system optimization suite featuring:
 
-## ✨ New in v6.0
+- **Real AI with Q-Learning** - Learns which tweaks work best for YOUR system
+- **27+ Optimizations** - Researched from Win11Debloat, Perfect-Windows-11, facet4windows
+- **Lenovo Support** - Native integration with Lenovo BIOS WMI for thermal profiles
+- **Auto-Updates** - Git-based update checker on every startup
+- **Bilingual** - English and Spanish support
 
-### 🛡️ Safety & Reliability
+---
 
-- **Smart Registry Backups**: Every registry change is automatically backed up to a `.reg` file in `Backups/` before application.
-- **Rollback System**: Integrated menu option to undo changes safely.
-- **System Restore**: Auto-creates restore points before major operations.
+## ✨ What's New in v6.1
 
-### 🌍 Neural Localization
+### 🧠 Q-Learning AI Engine
 
-- **Bilingual Interface**: Automatically detects your OS language (ES/EN) and adapts the UI, logs, and messages instantly.
-- **Manual Override**: Change language anytime via config or console.
+- **Real Reinforcement Learning** - The AI learns from each optimization cycle
+- **Persistent Q-Table** - Remembers what works across sessions
+- **Epsilon-Greedy Exploration** - Balances trying new tweaks vs using proven ones
+- **Regression Detection** - Automatically reverts tweaks that hurt performance
 
-### 🔥 Ultra Performance Modules
+### 📦 Expanded Tweak Library (27 Tweaks)
 
-- **Advanced Gaming**: MSI Mode configuration, High Precision Event Timer (HPET) tuning, and competitive network settings.
-- **Memory Intelligence**: Dynamic pagefile management and pool optimization based on usage patterns.
-- **SSD/NVMe Guard**: TRIM optimization and power state management tailored to drive health.
+Researched from popular GitHub repositories:
 
-### 🧠 AI & Machine Learning
+- [Win11Debloat](https://github.com/Raphire/Win11Debloat) - Privacy & debloating
+- [Perfect-Windows-11](https://github.com/vacisdev/Perfect-Windows-11) - UI performance
+- [facet4windows](https://github.com/hermannheringer/facet4windows) - Latency reduction
 
-- **AI Recommendations**: Scans your hardware and suggests specific optimizations (e.g., "Disable HAGS for this GPU", "Enable LargeSystemCache for 32GB RAM").
-- **ML Usage Patterns**: Analyzes your typical usage (Gaming vs Work) to auto-tune background services.
+### 🖥️ Lenovo-Specific Optimizations
 
-## 📦 Modular Architecture
+- Detects Lenovo systems automatically
+- Controls thermal profiles via WMI BIOS interface
+- Supports ThinkPad, IdeaPad, Legion, and Yoga models
 
-| Category | Modules | Description |
-| :--- | :--- | :--- |
-| **Core** | `Optimize-Windows.ps1` | **Main Controller**. Launch this to start. |
-| **Foundation** | `NeuralUtils.psm1`, `NeuralLocalization.psm1` | Shared libraries for safety, logging, and translation. |
-| **Standard** | `Boot`, `Debloat`, `Disk`, `Gaming`, `Thermal` | Essential tweaks for every system. |
-| **Ultra** | `Advanced-Gaming`, `Advanced-Memory`, `SSD-NVMe` | Deep-dive optimizations for enthusiasts. |
-| **Experimental** | `Advanced-Registry`, `Update-System` | Cutting-edge tweaks and git-based auto-updates. |
-| **AI/ML** | `AI-Recommendations`, `ML-Usage-Patterns` | Smart logic to tailor the experience to YOU. |
-| **Tools** | `System-Monitor`, `Benchmark`, `Health-Check` | Real-time diagnostics and verification. |
+### 🔄 Auto-Update System
 
-## 🚀 How to Use
+- Checks for updates on every startup
+- Shows changelog and prompts to update
+- Simple `git pull` integration
 
-### 1️⃣ Installation
+---
 
-1. **Download** the latest version (Clone or Zip).
-2. Right-click `Run-Optimizer.bat` and select **Run as Administrator**.
-   - *It will automatically request privileges and bypass execution policy safely.*
+## 📦 Module Architecture
 
-### 2️⃣ Main Menu Navigation
+```
+Scripts Opt/
+├── Optimize-Windows.ps1      # Main entry point
+├── Run-Optimizer.bat         # Quick launcher (Run as Admin)
+├── README.md
+│
+├── NeuralModules/
+│   ├── NeuralAI.psm1         # Q-Learning engine + 27 tweaks
+│   ├── Neural-Dashboard.ps1  # Real-time AI visualization
+│   ├── AI-Recommendations.ps1# Smart recommendations
+│   ├── ML-Usage-Patterns.ps1 # Usage pattern analysis
+│   ├── Update-Checker.ps1    # Git update system
+│   ├── Lenovo-Optimization.ps1# Lenovo-specific features
+│   │
+│   ├── Boot-Optimization.ps1
+│   ├── Debloat-Suite.ps1
+│   ├── Disk-Hygiene.ps1
+│   ├── Gaming-Optimization.ps1
+│   ├── Advanced-Registry.ps1
+│   └── ... (more modules)
+│
+├── Backups/                  # Registry backups
+└── NeuralBrain.json          # AI learning history
+```
 
-The new Neural Interface is divided into 4 intuitive categories:
+---
 
-#### **[1] 🚀 QUICK OPTIMIZE**
+## 🚀 Quick Start
 
-- **Best for beginners.**
-- Runs a curated sequence of safe, high-impact modules:
-  - `Boot-Optimization`: Faster startup.
-  - `Debloat-Suite`: Removes bloatware.
-  - `Disk-Hygiene`: Cleans junk files.
-  - `Gaming-Optimization`: Standard gaming tweaks.
+### Installation
 
-#### **[2] 🧠 AI SMART OPTIMIZE**
+```powershell
+# Clone the repository
+git clone https://github.com/LiliumFra/Scripts-Opt.git
+cd "Scripts-Opt"
 
-- **Interactive Intelligence.**
-- Scans your specific hardware (CPU, GPU, RAM, Storage).
-- **NEW**: Generates a list of tailored recommendations.
-- **NEW**: Interactive prompt asks if you want to **Auto-Apply** high-priority fixes immediately.
+# Run as Administrator
+.\Run-Optimizer.bat
+```
 
-#### **[3] 🛠️ ADVANCED TOOLS**
+### Or manually
 
-- **For power users.** Opens a sub-menu with granular control:
-  - `Ultra Gaming`: MSI Mode, HPET, specific latency tweaks.
-  - `Advanced Memory`: Pagefile tuning, large page support.
-  - `SSD/NVMe`: Drive-specific optimizations.
-  - `Network`: TCP/IP stack tuning (BBR, CTCP).
-  - `System Monitor`: Real-time resource tracking.
+```powershell
+# Open PowerShell as Administrator
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\Optimize-Windows.ps1
+```
 
-#### **[4] 🛡️ SAFETY & RESTORE**
+---
 
-- **Safety first.**
-- **Create Restore Point**: Manually capture system state.
-- **View Backups**: Open the dedicated registry backup folder.
-- **Rollback**: Instructions on how to undo changes via System Restore.
+## 📖 Module Usage Guide
 
-### 3️⃣ Health Check
+### 🧠 Neural AI (`NeuralAI.psm1`)
 
-- Run **Health-Check** (Option 12 in Advanced) to verify your system integrity (SFC/DISM) after heavy optimization.
+The core AI engine implements Q-Learning to learn optimal tweaks for your system.
 
-## ⚠️ Disclaimer
+```powershell
+# Import the module
+Import-Module .\NeuralModules\NeuralAI.psm1
 
-This tool interacts deeply with Windows internals (Registry, Services, Boot Manager).  
-**v6.0 includes robust backup systems**, but **ALWAYS** proceed with caution.  
-*The authors are not responsible for any system instability.*
+# Run a learning cycle
+$hw = Get-HardwareProfile  # From Smart-Optimizer
+Invoke-NeuralLearning -ProfileName "Gaming Session" -Hardware $hw -Workload "Gaming"
+
+# Get AI recommendation
+$recommendation = Get-NeuralRecommendation -Hardware $hw -Workload "General"
+```
+
+**Key Functions:**
+
+| Function | Description |
+|----------|-------------|
+| `Invoke-NeuralLearning` | Main learning cycle - measures, applies tweak, evaluates |
+| `Get-NeuralRecommendation` | Gets best tweak based on Q-Table |
+| `Measure-SystemMetrics` | Collects DPC, Interrupt, Context Switch, Ping, Temp |
+| `Get-QTable` | Returns current Q-Learning table |
+| `Get-BestTweaksForState` | Lists top N tweaks for current state |
+
+---
+
+### 📊 Neural Dashboard (`Neural-Dashboard.ps1`)
+
+Interactive visualization of AI learning state.
+
+```powershell
+.\NeuralModules\Neural-Dashboard.ps1
+```
+
+**Features:**
+
+- Live system score with metrics
+- Q-Learning statistics (cycles, epsilon, states)
+- Q-Table insights (best/worst actions)
+- ASCII trend graph of historical scores
+- Time-based predictions
+
+---
+
+### 🔮 AI Recommendations (`AI-Recommendations.ps1`)
+
+Smart recommendation engine with regression detection.
+
+```powershell
+.\NeuralModules\AI-Recommendations.ps1
+```
+
+**New in v6.1:**
+
+- **Q-Learning Recommendations** - Based on learned Q-values
+- **Regression Detection** - Alerts if performance is declining
+- **Correlation Analysis** - Identifies which tweaks historically improved scores
+
+---
+
+### 🖥️ Lenovo Optimization (`Lenovo-Optimization.ps1`)
+
+For Lenovo laptops (ThinkPad, IdeaPad, Legion, Yoga).
+
+```powershell
+.\NeuralModules\Lenovo-Optimization.ps1
+```
+
+**Features:**
+
+- Auto-detects Lenovo systems
+- Controls thermal profiles via WMI:
+  - `MaximizePerformance` - Full power, higher temps
+  - `Balanced` - Default mode
+  - `Cool` - Quiet, lower performance
+- Battery conservation mode
+- View all BIOS settings
+
+---
+
+### 🔄 Update Checker (`Update-Checker.ps1`)
+
+Checks for updates on startup.
+
+```powershell
+# Manual check
+. .\NeuralModules\Update-Checker.ps1
+$updates = Test-UpdatesAvailable
+if ($updates.UpdatesAvailable) {
+    Show-UpdateNotification -UpdateInfo $updates
+}
+```
+
+---
+
+## 🎮 Gaming Optimization Tweaks
+
+The AI can explore and learn from these gaming-focused tweaks:
+
+| Category | Tweak | Description |
+|----------|-------|-------------|
+| Latency | Timer Resolution | Forces 0.5ms timer |
+| Latency | Disable HPET | Uses faster TSC |
+| Latency | TSC Sync Policy | Enhanced synchronization |
+| Gaming | Fullscreen Optimizations | Classic fullscreen mode |
+| Gaming | Disable Game Bar | Removes overlay overhead |
+| Gaming | Disable Game DVR | No background recording |
+| Network | Disable Nagle | No packet buffering |
+| Network | TCP ACK Frequency | Immediate ACKs |
+| Scheduler | System Responsiveness | Prioritize foreground |
+| Scheduler | Disable Core Parking | All cores active |
+
+---
+
+## ⚠️ Risk Levels
+
+All tweaks are categorized by risk:
+
+| Risk | Description | Auto-Apply |
+|------|-------------|------------|
+| **Low** | Safe, easily reversible | ✅ Yes |
+| **Medium** | May affect some apps | ⚠️ With confirmation |
+| **High** | Significant system changes | ❌ Manual only |
+
+---
+
+## 🔧 Troubleshooting
+
+### Module won't import
+
+```powershell
+# Check execution policy
+Get-ExecutionPolicy
+Set-ExecutionPolicy Bypass -Scope Process -Force
+```
+
+### Lenovo features not working
+
+- Ensure Lenovo Vantage is installed
+- Check if WMI interface is available:
+
+```powershell
+Get-CimInstance -Namespace root\wmi -ClassName Lenovo_BiosSetting
+```
+
+### Q-Learning not learning
+
+- Run more learning cycles (minimum 10 for patterns)
+- Check `NeuralBrain.json` for history
+- Reset with Dashboard option 6
+
+---
 
 ## 🏆 Credits
 
 - **Lead Developer**: Jose Bustamante
-- **Architecture**: Modular Neural System
+- **Architecture**: Neural AI with Q-Learning
+- **Research Sources**: Win11Debloat, Perfect-Windows-11, facet4windows
 - **License**: MIT
-- **Philosophy**: "Intelligent Performance, Zero Compromise"
+- **Philosophy**: *"Intelligent Performance, Zero Compromise"*
+
+---
+
+## 📜 Changelog
+
+### v6.1 ULTRA (2026-01-14)
+
+- ✅ Q-Learning AI engine with persistent learning
+- ✅ Expanded tweak library (27 tweaks)
+- ✅ Neural Dashboard for AI visualization
+- ✅ Lenovo-specific optimizations via WMI
+- ✅ Auto-update checker
+- ✅ Regression detection in recommendations
+- ✅ Tweak correlation analysis
+
+### v6.0 ULTRA
+
+- AI Recommendations engine
+- ML Usage Pattern analysis
+- Bilingual support (EN/ES)
+- Safety & backup systems
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Test your changes
+4. Submit a pull request
+
+```bash
+git checkout -b feature/my-feature
+git commit -m "Add my feature"
+git push origin feature/my-feature
+```
