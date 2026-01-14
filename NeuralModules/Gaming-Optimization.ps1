@@ -1,11 +1,26 @@
 ﻿<#
 .SYNOPSIS
-    Gaming & Performance Module v6.0 - ULTIMATE
+    Gaming & Performance Module v6.5 ULTRA
     Optimizaciones para NVIDIA, AMD, Intel, y rendimiento general.
 
+.DESCRIPTION
+    Advanced Features:
+    - Game Mode & Xbox Game Bar optimization
+    - GPU Scheduling (HAGS) & DirectX 12 tweaks
+    - Mouse & Input latency reduction
+    - NVIDIA/AMD/Intel GPU-specific tweaks
+    - CPU Priority for Games (MMCSS)
+    - Fullscreen Optimizations global disable
+    - Network Throttling disable
+    - Nagle's Algorithm disable (per-adapter)
+    - VBS/Core Isolation option (latency reduction)
+    - Ultimate Performance power plan
+    - Smart DNS benchmark
+
 .NOTES
-    Parte de Windows Neural Optimizer v6.0
+    Parte de Windows Neural Optimizer v6.5 ULTRA
     Creditos: Jose Bustamante
+    Inspirado en: Chris Titus WinUtil, Sophia Script
 #>
 
 # Ensure Utils are loaded
@@ -243,13 +258,51 @@ function Optimize-Gaming {
     }
     
     # =========================================================================
-    # 9. SMART PACKET HANDLING
+    # 9. FULLSCREEN OPTIMIZATIONS GLOBAL DISABLE
     # =========================================================================
     
-    # Delegated to Network-Optimizer.ps1
-    # Redundancy removed in v6.1 update
+    Write-Step "[9/15] FULLSCREEN OPTIMIZATIONS GLOBAL"
+    
+    # Disable FSO globally for all applications
+    $fsoKeys = @(
+        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_FSEBehaviorMode"; Value = 2; Desc = "FSE Behavior: Fullscreen" },
+        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_HonorUserFSEBehaviorMode"; Value = 1; Desc = "Honor User FSE Mode" },
+        @{ Path = "HKCU:\System\GameConfigStore"; Name = "GameDVR_DXGIHonorFSEWindowsCompatible"; Value = 1; Desc = "DXGI Honor FSE" },
+        @{ Path = "HKLM:\SOFTWARE\Microsoft\Windows\Dwm"; Name = "OverlayTestMode"; Value = 5; Desc = "DWM Overlay Test Mode" }
+    )
+    
+    foreach ($k in $fsoKeys) {
+        if (Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc) {
+            $appliedTweaks++
+        }
+    }
+    
+    Write-Host "   [OK] Fullscreen Optimizations globalmente deshabilitadas" -ForegroundColor Green
     
     # =========================================================================
+    # 10. NETWORK THROTTLING & NAGLE'S ALGORITHM
+    # =========================================================================
+    
+    Write-Step "[10/15] NETWORK GAMING TWEAKS"
+    
+    # Disable Network Throttling Index
+    Set-RegistryKey -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xffffffff -Desc "Network Throttling OFF"
+    $appliedTweaks++
+    
+    # Disable Nagle's Algorithm on all network interfaces
+    Write-Host "   [i] Deshabilitando Nagle's Algorithm..." -ForegroundColor Cyan
+    
+    $tcpPath = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces"
+    $interfaces = Get-ChildItem -Path $tcpPath -ErrorAction SilentlyContinue
+    
+    foreach ($iface in $interfaces) {
+        $ifacePath = $iface.PSPath
+        Set-ItemProperty -Path $ifacePath -Name "TcpAckFrequency" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $ifacePath -Name "TCPNoDelay" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    
+    Write-Host "   [OK] Nagle's Algorithm deshabilitado en todas las interfaces" -ForegroundColor Green
+    $appliedTweaks++
     
     # =========================================================================
     # 10. SYSTEM LATENCY TWEAKS
@@ -363,6 +416,36 @@ function Optimize-Gaming {
     }
     catch {
         Write-Host "   [X] Error gestionando plan de energía." -ForegroundColor Red
+    }
+    
+    # =========================================================================
+    # 12. VBS / CORE ISOLATION (Optional - Performance vs Security)
+    # =========================================================================
+    
+    Write-Step "[12/15] VBS / CORE ISOLATION (LATENCIA)"
+    
+    Write-Host "   [!] VBS/Core Isolation puede reducir rendimiento hasta 10-15%" -ForegroundColor Yellow
+    Write-Host "   [i] Deshabilitarlo mejora latencia pero reduce seguridad." -ForegroundColor DarkGray
+    
+    $vbsChoice = Read-Host "   >> ¿Deshabilitar VBS para máximo rendimiento? (S/N)"
+    
+    if ($vbsChoice -match "^[Ss]") {
+        $vbsKeys = @(
+            @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"; Name = "EnableVirtualizationBasedSecurity"; Value = 0; Desc = "VBS OFF" },
+            @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"; Name = "Enabled"; Value = 0; Desc = "HVCI OFF" },
+            @{ Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\CredentialGuard"; Name = "Enabled"; Value = 0; Desc = "Credential Guard OFF" }
+        )
+        
+        foreach ($k in $vbsKeys) {
+            if (Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc) {
+                $appliedTweaks++
+            }
+        }
+        
+        Write-Host "   [OK] VBS/Core Isolation deshabilitado. Reinicio requerido." -ForegroundColor Green
+    }
+    else {
+        Write-Host "   [--] VBS mantenido (seguridad conservada)" -ForegroundColor DarkGray
     }
     
     # =========================================================================
@@ -513,4 +596,5 @@ function Optimize-Gaming {
 }
 
 Optimize-Gaming
+
 

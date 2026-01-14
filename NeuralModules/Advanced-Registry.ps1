@@ -94,3 +94,4 @@ function Optimize-GamingRegistry {
 
 Optimize-GamingRegistry
 
+

@@ -1,11 +1,22 @@
 ﻿<#
 .SYNOPSIS
-    Debloat & Privacy Suite v3.5 - ULTIMATE
-    Elimina bloatware, telemetría, y optimiza privacidad.
+    Debloat & Privacy Suite v6.5 ULTRA
+    Elimina bloatware, telemetría, Windows 11 AI features, y optimiza privacidad.
+
+.DESCRIPTION
+    Advanced Features:
+    - Expanded bloatware list (60+ apps)
+    - Windows 11 Copilot & Recall blocking
+    - Microsoft Edge feature debloat
+    - Scheduled task management
+    - Telemetry service disabling
+    - OneDrive cleanup
+    - Widgets & Chat removal
 
 .NOTES
-    Parte de Windows Neural Optimizer v3.5
+    Parte de Windows Neural Optimizer v6.5 ULTRA
     Creditos: Jose Bustamante
+    Inspirado en: Chris Titus WinUtil, Sophia Script, Win11Debloat
 #>
 
 # Ensure Utils are loaded
@@ -21,21 +32,41 @@ function Optimize-Debloat {
     [CmdletBinding()]
     param()
     
-    Write-Section "DEBLOAT & PRIVACY SUITE v3.5"
+    Write-Section "DEBLOAT & PRIVACY SUITE v6.5 ULTRA"
     
     $removedApps = 0
     $appliedTweaks = 0
     
     # =========================================================================
-    # 1. WHITELIST - Apps que NUNCA tocamos
+    # 1. WHITELIST - Apps que NUNCA tocamos (CRITICAL for Windows Store)
     # =========================================================================
     
     $WhiteList = @(
-        "Microsoft.WindowsCalculator", "Microsoft.WindowsStore", "Microsoft.Windows.Photos",
-        "Microsoft.WindowsTerminal", "Microsoft.DesktopAppInstaller", "Microsoft.StorePurchaseApp",
-        "Microsoft.VP9VideoExtensions", "Microsoft.WebMediaExtensions", "Microsoft.WebpImageExtension",
-        "Microsoft.HEIFImageExtension", "Microsoft.HEVCVideoExtension", "Microsoft.ScreenSketch",
-        "Microsoft.Paint", "Microsoft.WindowsNotepad"
+        # Windows Store & Dependencies (CRITICAL - DO NOT REMOVE)
+        "Microsoft.WindowsStore",
+        "Microsoft.StorePurchaseApp",
+        "Microsoft.DesktopAppInstaller",
+        "Microsoft.Services.Store.Engagement",
+        "Microsoft.NET.Native.Framework.*",
+        "Microsoft.NET.Native.Runtime.*",
+        "Microsoft.VCLibs.*",
+        "Microsoft.UI.Xaml.*",
+        
+        # Essential Apps
+        "Microsoft.WindowsCalculator",
+        "Microsoft.Windows.Photos",
+        "Microsoft.WindowsTerminal",
+        "Microsoft.ScreenSketch",
+        "Microsoft.Paint",
+        "Microsoft.WindowsNotepad",
+        
+        # Media Codecs (needed for video playback)
+        "Microsoft.VP9VideoExtensions",
+        "Microsoft.WebMediaExtensions",
+        "Microsoft.WebpImageExtension",
+        "Microsoft.HEIFImageExtension",
+        "Microsoft.HEVCVideoExtension",
+        "Microsoft.RawImageExtension"
     )
     
     # =========================================================================
@@ -45,6 +76,7 @@ function Optimize-Debloat {
     Write-Step "[1/6] ELIMINANDO BLOATWARE"
     
     $BloatList = @(
+        # Microsoft Core Bloat
         "Microsoft.3DBuilder", "Microsoft.549981C3F5F10", "Microsoft.BingNews",
         "Microsoft.BingWeather", "Microsoft.BingSports", "Microsoft.BingFinance",
         "Microsoft.BingSearch", "Microsoft.Getstarted", "Microsoft.MicrosoftSolitaireCollection",
@@ -57,14 +89,32 @@ function Optimize-Debloat {
         "Microsoft.OneConnect", "Microsoft.GetHelp", "Microsoft.Todos",
         "Microsoft.PowerAutomateDesktop", "MicrosoftCorporationII.QuickAssist",
         "Microsoft.Clipchamp", "MicrosoftTeams", "Microsoft.OutlookForWindows",
+        
+        # Xbox (Optional - many gamers want these)
         "Microsoft.XboxApp", "Microsoft.Xbox.TCUI", "Microsoft.XboxGamingOverlay",
         "Microsoft.XboxGameOverlay", "Microsoft.XboxSpeechToTextOverlay",
         "Microsoft.XboxIdentityProvider", "Microsoft.GamingApp",
+        
+        # Media
         "Microsoft.ZuneMusic", "Microsoft.ZuneVideo",
+        
+        # Third Party Bloat
         "king.com.*", "Flipboard.Flipboard", "9E2F88E3.Twitter",
         "SpotifyAB.SpotifyMusic", "Facebook.*", "Disney.*",
         "TikTok.*", "BytedancePte.*", "ADOBESYSTEMSINCORPORATED.*",
-        "AmazonVideo.PrimeVideo", "Duolingo*", "Clipchamp*"
+        "AmazonVideo.PrimeVideo", "Duolingo*", "Clipchamp*",
+        
+        # Windows 11 New Bloat
+        "Microsoft.BingTravel", "Microsoft.BingHealthAndFitness",
+        "Microsoft.BingFoodAndDrink", "Microsoft.ZuneVideo",
+        "MicrosoftCorporationII.MicrosoftFamily",
+        "Microsoft.WindowsMeetNow", "Microsoft.GamingServices",
+        
+        # Phone Link / Your Phone
+        "Microsoft.YourPhone", "Microsoft.Windows.Phone",
+        
+        # Cortana
+        "Microsoft.549981C3F5F10"
     )
     
     $i = 0
@@ -210,32 +260,104 @@ function Optimize-Debloat {
     }
     
     # =========================================================================
-    # 7. ADDITIONAL
+    # 7. OPTIONAL: ONEDRIVE CLEANUP
     # =========================================================================
     
-    Write-Step "[6/6] LIMPIEZA ADICIONAL"
+    Write-Step "[6/9] ONEDRIVE (OPCIONAL)"
     
-    # OneDrive Auto-start
-    try {
-        Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "OneDrive" -ErrorAction SilentlyContinue
-        Write-Host "   [OK] OneDrive auto-start deshabilitado" -ForegroundColor Green
-        $appliedTweaks++
+    Write-Host "   [?] ¿Desea deshabilitar OneDrive auto-start?" -ForegroundColor Yellow
+    Write-Host "       (OneDrive seguirá instalado, solo se quita del inicio)" -ForegroundColor DarkGray
+    $oneDriveChoice = Read-Host "   >> (S/N)"
+    
+    if ($oneDriveChoice -match "^[Ss]") {
+        try {
+            Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "OneDrive" -ErrorAction SilentlyContinue
+            Write-Host "   [OK] OneDrive auto-start deshabilitado" -ForegroundColor Green
+            $appliedTweaks++
+        }
+        catch {}
     }
-    catch {}
+    else {
+        Write-Host "   [--] OneDrive mantenido" -ForegroundColor DarkGray
+    }
     
-    # Windows Widgets & Chat
+    # Windows Widgets & Chat (always safe to remove)
     if (Set-RegistryKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0 -Desc "Windows Widgets (Policy)") { $appliedTweaks++ }
     if (Set-RegistryKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 0 -Desc "Windows Widgets (Taskbar)") { $appliedTweaks++ }
     if (Set-RegistryKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 0 -Desc "Teams Chat icon") { $appliedTweaks++ }
     
+    # =========================================================================
+    # 8. OPTIONAL: WINDOWS 11 AI FEATURES (Copilot & Recall)
+    # =========================================================================
+    
+    Write-Step "[7/9] WINDOWS 11 AI FEATURES (OPCIONAL)"
+    
+    Write-Host "   [?] ¿Desea deshabilitar Windows Copilot y Recall?" -ForegroundColor Yellow
+    Write-Host "       (Mejora privacidad pero pierde funciones IA)" -ForegroundColor DarkGray
+    $copilotChoice = Read-Host "   >> (S/N)"
+    
+    if ($copilotChoice -match "^[Ss]") {
+        $aiKeys = @(
+            # Windows Copilot
+            @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"; Name = "TurnOffWindowsCopilot"; Value = 1; Desc = "Windows Copilot OFF" },
+            @{ Path = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"; Name = "TurnOffWindowsCopilot"; Value = 1; Desc = "User Copilot OFF" },
+            @{ Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "ShowCopilotButton"; Value = 0; Desc = "Copilot Taskbar Button OFF" },
+            
+            # Windows Recall (24H2+) & AI Analysis
+            @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"; Name = "DisableAIDataAnalysis"; Value = 1; Desc = "Windows Recall OFF" },
+            @{ Path = "HKCU:\Software\Policies\Microsoft\Windows\WindowsAI"; Name = "DisableAIDataAnalysis"; Value = 1; Desc = "User Recall OFF" },
+            @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"; Name = "DisableSearchBoxSuggestions"; Value = 1; Desc = "Search AI Suggestions OFF" },
+            
+            # Disable AI in Search & Shell
+            @{ Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"; Name = "IsDynamicSearchBoxEnabled"; Value = 0; Desc = "Dynamic Search Box OFF" }
+        )
+        
+        foreach ($k in $aiKeys) {
+            if (Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc) {
+                $appliedTweaks++
+            }
+        }
+        
+        Write-Host "   [OK] Copilot y Recall deshabilitados" -ForegroundColor Green
+    }
+    else {
+        Write-Host "   [--] Copilot y Recall mantenidos" -ForegroundColor DarkGray
+    }
+    
+    # =========================================================================
+    # 9. EDGE DEBLOAT (Feature Restrictions)
+    # =========================================================================
+    
+    Write-Step "[8/9] EDGE DEBLOAT (FEATURES)"
+    
+    $edgeKeys = @(
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "HubsSidebarEnabled"; Value = 0; Desc = "Edge Sidebar OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "EdgeShoppingAssistantEnabled"; Value = 0; Desc = "Edge Shopping OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "PersonalizationReportingEnabled"; Value = 0; Desc = "Edge Personalization OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "ShowMicrosoftRewards"; Value = 0; Desc = "Edge Rewards OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "SpotlightExperiencesAndRecommendationsEnabled"; Value = 0; Desc = "Edge Spotlight OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "WebWidgetAllowed"; Value = 0; Desc = "Edge Web Widget OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "DiagnosticData"; Value = 0; Desc = "Edge Telemetry OFF" },
+        @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Name = "EdgeCollectionsEnabled"; Value = 0; Desc = "Edge Collections OFF" }
+    )
+    
+    foreach ($k in $edgeKeys) {
+        if (Set-RegistryKey -Path $k.Path -Name $k.Name -Value $k.Value -Desc $k.Desc) {
+            $appliedTweaks++
+        }
+    }
+    
+    Write-Host "   [OK] Edge features deshabilitados" -ForegroundColor Green
+    
     # Resumen
     Write-Host ""
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green
-    Write-Host " |  DEBLOAT & PRIVACY COMPLETADO                          |" -ForegroundColor Green
+    Write-Host " |  DEBLOAT & PRIVACY v6.5 ULTRA COMPLETADO               |" -ForegroundColor Green
     Write-Host " |  Apps eliminadas: $removedApps                                    |" -ForegroundColor Green
     Write-Host " |  Tweaks aplicados: $appliedTweaks                                  |" -ForegroundColor Green
     Write-Host " +--------------------------------------------------------+" -ForegroundColor Green
 }
 
 Optimize-Debloat
+
 

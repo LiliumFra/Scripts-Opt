@@ -350,15 +350,33 @@ function Assert-SupportedOS {
 
 function Get-HardwareProfile {
     $hw = [PSCustomObject]@{
-        IsSSD       = $false
-        RamGB       = 0
-        CpuVendor   = "Unknown"
-        CpuCores    = 0
-        CpuThreads  = 0
-        CpuMaxSpeed = 0
-        GpuVendor   = "Unknown"
-        GpuName     = "Unknown"
-        RamSpeed    = 0
+        # Storage
+        IsSSD           = $false
+        IsNVMe          = $false
+        
+        # RAM
+        RamGB           = 0
+        RamSpeed        = 0
+        
+        # CPU
+        CpuVendor       = "Unknown"
+        CpuName         = "Unknown"
+        CpuCores        = 0
+        CpuThreads      = 0
+        CpuMaxSpeed     = 0
+        
+        # GPU
+        GpuVendor       = "Unknown"
+        GpuName         = "Unknown"
+        Gpus            = @()
+        
+        # System Type
+        IsLaptop        = $false
+        HasBattery      = $false
+        IsOnBattery     = $false
+        
+        # Performance Tier (calculated)
+        PerformanceTier = "Standard"  # Low, Standard, High, Ultra
     }
 
     # RAM
@@ -378,6 +396,7 @@ function Get-HardwareProfile {
     try {
         $cpu = Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($cpu) {
+            $hw.CpuName = $cpu.Name.Trim()
             if ($cpu.Name -match "Intel") { $hw.CpuVendor = "Intel" }
             elseif ($cpu.Name -match "AMD|Ryzen") { $hw.CpuVendor = "AMD" }
             $hw.CpuCores = $cpu.NumberOfCores
@@ -387,19 +406,92 @@ function Get-HardwareProfile {
     }
     catch {}
     
-    # GPU
+    # GPU Priority Detection
     try {
-        $gpu = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($gpu) {
-            $hw.GpuName = $gpu.Name
-            if ($gpu.Name -match "NVIDIA") { $hw.GpuVendor = "NVIDIA" }
-            elseif ($gpu.Name -match "AMD|Radeon") { $hw.GpuVendor = "AMD" }
-            elseif ($gpu.Name -match "Intel") { $hw.GpuVendor = "Intel" }
+        $gpus = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue
+        
+        # Priority mapping (Higher number = Higher Priority)
+        # NVIDIA = 3, AMD = 2, Intel = 1, Other = 0
+        $bestGpu = $null
+        $maxPriority = -1
+        
+        $hw.Gpus = @()
+        
+        foreach ($gpu in $gpus) {
+            # Determine vendor for this specific GPU
+            $vendor = "Generic"
+            if ($gpu.Name -match "NVIDIA") { $vendor = "NVIDIA" }
+            elseif ($gpu.Name -match "AMD|Radeon") { $vendor = "AMD" }
+            elseif ($gpu.Name -match "Intel") { $vendor = "Intel" }
+            
+            # Add to list
+            $hw.Gpus += [PSCustomObject]@{
+                Name   = $gpu.Name
+                Vendor = $vendor
+            }
+
+            # Prioritization logic for Primary GPU selection
+            $priority = 0
+            if ($vendor -eq "NVIDIA") { $priority = 3 }
+            elseif ($vendor -eq "AMD") { $priority = 2 }
+            elseif ($vendor -eq "Intel" -and $gpu.Name -notmatch "Arc") { $priority = 1 } 
+            
+            if ($priority -gt $maxPriority) {
+                $maxPriority = $priority
+                $bestGpu = $gpu
+            }
+        }
+        
+        # Fallback if no specific vendor matched or empty list logic handled by loop
+        if (-not $bestGpu -and $gpus) {
+            $bestGpu = $gpus | Select-Object -First 1
+        }
+        
+        if ($bestGpu) {
+            $hw.GpuName = $bestGpu.Name
+            if ($bestGpu.Name -match "NVIDIA") { $hw.GpuVendor = "NVIDIA" }
+            elseif ($bestGpu.Name -match "AMD|Radeon") { $hw.GpuVendor = "AMD" }
+            elseif ($bestGpu.Name -match "Intel") { $hw.GpuVendor = "Intel" }
+            else { $hw.GpuVendor = "Generic" }
+            
+            # Store PNP Device ID for MSI Mode
+            $hw | Add-Member -MemberType NoteProperty -Name "GpuPnpId" -Value $bestGpu.PNPDeviceID -ErrorAction SilentlyContinue
         }
     }
     catch {}
+
+    function Set-DeviceMSIMode {
+        param(
+            [string]$PnpDeviceID,
+            [string]$DeviceDesc = "Device"
+        )
     
-    # SSD
+        if (-not $PnpDeviceID) { return }
+    
+        try {
+            # Registry location for PCI devices
+            # HKLM\SYSTEM\CurrentControlSet\Enum\<PnpDeviceID>\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties
+        
+            $basePath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$PnpDeviceID\Device Parameters\Interrupt Management"
+            $msiPath = "$basePath\MessageSignaledInterruptProperties"
+        
+            # Check if key exists, if not create specifically for MSI support if driver allows (risky, so we usually only toggle if key implies support or we force it known safe devices)
+            # Safer: Only enable if "MessageSignaledInterruptProperties" usually exists or we are sure.
+            # For now, we create structure if missing which is standard for forcing MSI.
+        
+            if (-not (Test-Path $msiPath)) {
+                New-Item -Path $msiPath -Force | Out-Null
+                New-Item -Path "$basePath\Affinity Policy" -Force | Out-Null
+            }
+        
+            Set-RegistryKey -Path $msiPath -Name "MSISupported" -Value 1 -Type DWord -Desc "Enable MSI Mode for $DeviceDesc"
+        }
+        catch {
+            Write-Log "Failed to set MSI mode for $DeviceDesc: $_" "Error"
+        }
+    }
+    
+    # SSD Detection
     try {
         $driveLetter = ($env:SystemDrive -replace ':', '')
         $partition = Get-Partition -DriveLetter $driveLetter -ErrorAction SilentlyContinue
@@ -413,8 +505,82 @@ function Get-HardwareProfile {
 
         if ($targetDisk -and ($targetDisk.MediaType -match "SSD|Unspecified")) {
             $hw.IsSSD = $true
-            # Simple NVMe check: usually bus type 17 is NVMe
-            if ($targetDisk.BusType -eq 17) { $hw.IsNVMe = $true } else { $hw.IsNVMe = $false }
+            # NVMe check: bus type 17 is NVMe
+            if ($targetDisk.BusType -eq 17) { $hw.IsNVMe = $true }
+        }
+    }
+    catch {}
+    
+    # Laptop/Battery Detection
+    try {
+        $chassis = Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue
+        if ($chassis) {
+            # ChassisTypes: 8=Portable, 9=Laptop, 10=Notebook, 14=Sub Notebook, 31=Convertible, 32=Detachable
+            $laptopTypes = @(8, 9, 10, 14, 31, 32)
+            if ($laptopTypes -contains $chassis.ChassisTypes[0]) {
+                $hw.IsLaptop = $true
+            }
+        }
+        
+        $battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+        if ($battery) {
+            $hw.HasBattery = $true
+            # BatteryStatus 1 = Discharging (on battery)
+            if ($battery.BatteryStatus -eq 1) {
+                $hw.IsOnBattery = $true
+            }
+        }
+    }
+    catch {}
+    
+    # Calculate Performance Tier
+    try {
+        $score = 0
+        
+        # RAM scoring
+        if ($hw.RamGB -ge 32) { $score += 3 }
+        elseif ($hw.RamGB -ge 16) { $score += 2 }
+        elseif ($hw.RamGB -ge 6) { $score += 1 }
+        
+        # CPU scoring
+        if ($hw.CpuThreads -ge 16) { $score += 3 }
+        elseif ($hw.CpuThreads -ge 8) { $score += 2 }
+        elseif ($hw.CpuThreads -ge 4) { $score += 1 }
+        
+        # GPU scoring
+        if ($hw.GpuVendor -in @("NVIDIA", "AMD") -and $hw.GpuName -notmatch "Intel") { $score += 2 }
+        
+        # SSD scoring
+        if ($hw.IsNVMe) { $score += 2 }
+        elseif ($hw.IsSSD) { $score += 1 }
+        
+        # Tier assignment
+        if ($score -ge 8) { $hw.PerformanceTier = "Ultra" }
+        elseif ($score -ge 5) { $hw.PerformanceTier = "High" }
+        elseif ($score -ge 3) { $hw.PerformanceTier = "Standard" }
+        else { $hw.PerformanceTier = "Low" }
+    }
+    catch {}
+    
+    # CPU Generation Detection (for Spectre mitigation recommendation)
+    try {
+        $hw | Add-Member -MemberType NoteProperty -Name "CpuGen" -Value "Unknown" -ErrorAction SilentlyContinue
+        $hw | Add-Member -MemberType NoteProperty -Name "IsOldCpu" -Value $false -ErrorAction SilentlyContinue
+        
+        if ($hw.CpuName -match "Intel.*Core.*i\d-(\d+)") {
+            $model = $matches[1]
+            if ($model.Length -eq 4) { $gen = [int]$model.Substring(0, 1) }
+            elseif ($model.Length -eq 5) { $gen = [int]$model.Substring(0, 2) }
+            
+            if ($gen) {
+                $hw.CpuGen = "Intel Gen $gen"
+                if ($gen -lt 8) { $hw.IsOldCpu = $true } # Gen 7 (Kaby Lake) or older often benefit significantly
+            }
+        }
+        elseif ($hw.CpuName -match "Ryzen \d (\d{4})") {
+            [int]$gen = $matches[1]
+            $hw.CpuGen = "AMD Ryzen Series $gen"
+            # Ryzen 1000/2000 specific checks if needed, generally less critical for Spectre, but useful context
         }
     }
     catch {}
@@ -663,4 +829,5 @@ function Set-NeuralConfig {
 }
 
 Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig
+
 

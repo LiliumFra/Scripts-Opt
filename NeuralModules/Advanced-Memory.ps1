@@ -470,3 +470,4 @@ function Start-AdvancedMemoryOptimization {
 Start-AdvancedMemoryOptimization
 Wait-ForKeyPress
 
+

@@ -49,7 +49,7 @@ $Script:NetworkProfiles = @{
             # Advanced
             Timestamps          = $false
             ECN                 = $true                 # Explicit Congestion Notification
-            CongestionProvider  = "CTCP" # Compound TCP
+            CongestionProvider  = "CUBIC"               # Best for Win11/Modern Networks
         }
     }
     
@@ -72,7 +72,10 @@ $Script:NetworkProfiles = @{
             # Advanced
             Timestamps          = $false         # Overhead reduction
             ECN                 = $true                 # Modern routers benefit
-            CongestionProvider  = "CTCP" # Good balance
+            CongestionProvider  = "CUBIC"               # Optimal throughput/latency balance
+            
+            # Offloads (Gaming Specific)
+            LSO                 = $false                # Disable Large Send Offload (Latency reduction)
         }
     }
     
@@ -190,15 +193,15 @@ function Invoke-NetworkProfile {
         [string]$ProfileName
     )
     
-    $profile = $Script:NetworkProfiles[$ProfileName]
-    $settings = $profile.Settings
+    $netProfile = $Script:NetworkProfiles[$ProfileName]
+    $settings = $netProfile.Settings
     
     Write-Host ""
     Write-Host " +========================================================+" -ForegroundColor Cyan
-    Write-Host " |  APLICANDO PERFIL: $($profile.Name.PadRight(36))  |" -ForegroundColor Cyan
+    Write-Host " |  APLICANDO PERFIL: $($netProfile.Name.PadRight(36))  |" -ForegroundColor Cyan
     Write-Host " +========================================================+" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host " $($profile.Description)" -ForegroundColor Gray
+    Write-Host " $($netProfile.Description)" -ForegroundColor Gray
     Write-Host ""
     
     $applied = 0
@@ -335,6 +338,18 @@ function Invoke-NetworkProfile {
         }
         catch {
             Write-Host "   [!] Some adapter properties not supported" -ForegroundColor DarkGray
+        }
+
+        # Large Send Offload (LSO) - Critical for Competitive Gaming
+        if ($settings.ContainsKey("LSO")) {
+            $lsoValue = if ($settings.LSO) { "Enabled" } else { "Disabled" }
+            try {
+                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*LsoV2IPv4" -DisplayValue $lsoValue -ErrorAction SilentlyContinue
+                Set-NetAdapterAdvancedProperty -Name $activeNic.Name -DisplayName "*LsoV2IPv6" -DisplayValue $lsoValue -ErrorAction SilentlyContinue
+                Write-Host "   [OK] Large Send Offload (LSO): $lsoValue" -ForegroundColor Green
+                $applied++
+            }
+            catch {}
         }
     }
     else {
@@ -502,11 +517,11 @@ function Show-NetworkMenu {
     
     $i = 1
     foreach ($profileKey in $Script:NetworkProfiles.Keys | Sort-Object) {
-        $profile = $Script:NetworkProfiles[$profileKey]
+        $netProfile = $Script:NetworkProfiles[$profileKey]
         Write-Host " ║ $i. " -ForegroundColor Gray -NoNewline
-        Write-Host "$($profile.Name.PadRight(48))" -ForegroundColor Cyan -NoNewline
+        Write-Host "$($netProfile.Name.PadRight(48))" -ForegroundColor Cyan -NoNewline
         Write-Host " ║" -ForegroundColor Gray
-        Write-Host " ║    $($profile.Description.PadRight(49)) ║" -ForegroundColor DarkGray
+        Write-Host " ║    $($netProfile.Description.PadRight(49)) ║" -ForegroundColor DarkGray
         $i++
     }
     
@@ -572,4 +587,5 @@ while ($true) {
         }
     }
 }
+
 

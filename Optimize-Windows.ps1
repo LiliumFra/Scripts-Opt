@@ -1,18 +1,23 @@
 ﻿<#
 .SYNOPSIS
-    WINDOWS NEURAL OPTIMIZER v5.0 ULTRA
+    WINDOWS NEURAL OPTIMIZER v6.5 ULTRA
     Controlador Maestro con módulos avanzados integrados.
 
 .DESCRIPTION
-    v5.0 ULTRA incluye:
-    - Advanced Gaming (MSI, HPET, competitive network)
+    v6.5 ULTRA incluye:
+    - Advanced Gaming (MSI, HPET, VBS, Nagle, FSO)
     - Advanced Memory (smart paging, pools, compression)
     - SSD/NVMe Optimizer (TRIM, power, health)
     - Profile System (presets para diferentes usos)
-    - Todo de v4.0 mejorado
+    - Privacy Guardian v6.5 (30+ tweaks, Copilot/Recall blocking)
+    - Debloat Suite v6.5 (60+ apps, Edge debloat, AI features)
+    - Neural Cache v6.5 (60+ locations, multi-user, DISM)
+    - NEW: Update-Manager (defer, pause, driver blocking)
+    - NEW: UI-Preferences (context menu, themes, taskbar)
+    - Todo de v5.0 mejorado
 
 .NOTES
-    Versión: 5.0 ULTRA
+    Versión: 6.5 ULTRA
     Creditos: Jose Bustamante
     Requiere: PowerShell 5.1+, Administrador
 #>
@@ -28,7 +33,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Script:Version = "5.0 ULTRA"
+$Script:Version = "6.5 ULTRA"
 $Script:ScriptDir = $PSScriptRoot
 $Script:ModuleDir = Join-Path -Path $Script:ScriptDir -ChildPath "NeuralModules"
 $Script:LogFile = Join-Path -Path $Script:ScriptDir -ChildPath "Neural_History.log"
@@ -200,8 +205,8 @@ function Show-Menu {
     Write-Host " ║ 1.  🚀 QUICK OPTIMIZE (Recommended)                   ║" -ForegroundColor Green
     Write-Host " ║     (Boot, Debloat, Disk, Gaming Standard)            ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ 2.  🧠 AI SMART OPTIMIZE                              ║" -ForegroundColor Magenta
-    Write-Host " ║     (Analyzes hardware & applies best tweaks)         ║" -ForegroundColor Gray
+    Write-Host \" ║ 2.  🧠 SMART OPTIMIZER                                 ║\" -ForegroundColor Magenta
+    Write-Host \" ║     (Auto-detects hardware, applies optimal tweaks)    ║\" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
     Write-Host " ║ 3.  🛠️ ADVANCED TOOLS                                 ║" -ForegroundColor Yellow
     Write-Host " ║     (Manual selection, Ultra Tweaks, Network, SSD)    ║" -ForegroundColor Gray
@@ -218,25 +223,32 @@ function Show-Menu {
 function Show-AdvancedMenu {
     Clear-Host
     Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host " ║              ADVANCED TOOLS                           ║" -ForegroundColor Yellow
+    Write-Host " ║              ADVANCED TOOLS v6.5                      ║" -ForegroundColor Yellow
     Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
     Write-Host " ║ [STANDARD MODULES]                                    ║" -ForegroundColor White
     Write-Host " ║ 1. Boot Optimization                                  ║" -ForegroundColor Gray
-    Write-Host " ║ 2. Debloat Suite (Apps + Privacy)                     ║" -ForegroundColor Gray
+    Write-Host " ║ 2. Debloat Suite (Apps + Privacy + AI Block)          ║" -ForegroundColor Gray
     Write-Host " ║ 3. Disk Hygiene (Cleanup)                             ║" -ForegroundColor Gray
     Write-Host " ║ 4. Gaming Optimization (Standard)                     ║" -ForegroundColor Gray
     Write-Host " ║ 5. Thermal Optimization                               ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
     Write-Host " ║ [ULTRA MODULES]                                       ║" -ForegroundColor Magenta
-    Write-Host " ║ 6. Advanced Gaming (MSI, HPET, Latency)               ║" -ForegroundColor Magenta
+    Write-Host " ║ 6. Advanced Gaming (MSI, HPET, VBS, Nagle)            ║" -ForegroundColor Magenta
     Write-Host " ║ 7. Advanced Memory (Pools, Pagefile)                  ║" -ForegroundColor Magenta
     Write-Host " ║ 8. SSD/NVMe Optimizer                                 ║" -ForegroundColor Magenta
-    Write-Host " ║ 9. Advanced Registry (Experimental)                   ║" -ForegroundColor Red
+    Write-Host " ║ 9. Performance Extreme (Timer, C-States, DPC)         ║" -ForegroundColor Red
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ [TOOLS]                                               ║" -ForegroundColor Green
-    Write-Host " ║ 10. System Monitor                                    ║" -ForegroundColor Green
-    Write-Host " ║ 11. Network Diagnostics                               ║" -ForegroundColor Green
-    Write-Host " ║ 12. Health Check                                      ║" -ForegroundColor Green
+    Write-Host " ║ [NEW v6.5 MODULES]                                    ║" -ForegroundColor Green
+    Write-Host " ║ 10. Privacy Guardian (30+ Tweaks)                     ║" -ForegroundColor Green
+    Write-Host " ║ 11. Neural Cache (60+ Locations)                      ║" -ForegroundColor Green
+    Write-Host " ║ 12. Update Manager (Defer, Pause, Block Drivers)      ║" -ForegroundColor Green
+    Write-Host " ║ 13. UI Preferences (Context Menu, Themes)             ║" -ForegroundColor Green
+    Write-Host " ║                                                       ║" -ForegroundColor Cyan
+    Write-Host " ║ [TOOLS]                                               ║" -ForegroundColor White
+    Write-Host " ║ 14. System Monitor                                    ║" -ForegroundColor White
+    Write-Host " ║ 15. Network Diagnostics                               ║" -ForegroundColor White
+    Write-Host " ║ 16. Health Check                                      ║" -ForegroundColor White
+    Write-Host " ║ 17. Repair Windows Store                              ║" -ForegroundColor Yellow
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
     Write-Host " ║ 0. Back to Main Menu                                  ║" -ForegroundColor White
     Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
@@ -367,8 +379,8 @@ while ($true) {
         }
         
         '2' {
-            # AI OPTIMIZATION
-            Invoke-OptimizationModule -Name "AI-RECOMMENDATIONS" -ScriptPath (Join-Path $Script:ModuleDir "AI-Recommendations.ps1")
+            # SMART HARDWARE-AWARE OPTIMIZATION
+            Invoke-OptimizationModule -Name "SMART-OPTIMIZER" -ScriptPath (Join-Path $Script:ModuleDir "Smart-Optimizer.ps1")
             Wait-ForKeyPress
         }
         
@@ -386,10 +398,29 @@ while ($true) {
                     '6' { Invoke-OptimizationModule -Name 'ULTRA-GAMING' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Gaming.ps1"); Wait-ForKeyPress }
                     '7' { Invoke-OptimizationModule -Name 'ADV-MEMORY' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Memory.ps1"); Wait-ForKeyPress }
                     '8' { Invoke-OptimizationModule -Name 'SSD-NVME' -ScriptPath (Join-Path $Script:ModuleDir "SSD-NVMe-Optimizer.ps1"); Wait-ForKeyPress }
-                    '9' { Invoke-OptimizationModule -Name 'REGISTRY' -ScriptPath (Join-Path $Script:ModuleDir "Advanced-Registry.ps1"); Wait-ForKeyPress }
-                    '10' { Invoke-OptimizationModule -Name 'MONITOR' -ScriptPath (Join-Path $Script:ModuleDir "System-Monitor.ps1"); Wait-ForKeyPress }
-                    '11' { Invoke-OptimizationModule -Name 'NETWORK' -ScriptPath (Join-Path $Script:ModuleDir "Network-Optimizer.ps1"); Wait-ForKeyPress }
-                    '12' { Invoke-OptimizationModule -Name 'HEALTH' -ScriptPath (Join-Path $Script:ModuleDir "Health-Check.ps1"); Wait-ForKeyPress }
+                    '9' { Invoke-OptimizationModule -Name 'PERF-EXTREME' -ScriptPath (Join-Path $Script:ModuleDir "Performance-Extreme.ps1"); Wait-ForKeyPress }
+                    '10' { Invoke-OptimizationModule -Name 'PRIVACY' -ScriptPath (Join-Path $Script:ModuleDir "Privacy-Guardian.ps1"); Wait-ForKeyPress }
+                    '11' { Invoke-OptimizationModule -Name 'CACHE' -ScriptPath (Join-Path $Script:ScriptDir "NeuralCache-Diagnostic.ps1"); Wait-ForKeyPress }
+                    '12' { Invoke-OptimizationModule -Name 'UPDATE-MGR' -ScriptPath (Join-Path $Script:ModuleDir "Update-Manager.ps1"); Wait-ForKeyPress }
+                    '13' { Invoke-OptimizationModule -Name 'UI-PREFS' -ScriptPath (Join-Path $Script:ModuleDir "UI-Preferences.ps1"); Wait-ForKeyPress }
+                    '14' { Invoke-OptimizationModule -Name 'MONITOR' -ScriptPath (Join-Path $Script:ModuleDir "System-Monitor.ps1"); Wait-ForKeyPress }
+                    '15' { Invoke-OptimizationModule -Name 'NETWORK' -ScriptPath (Join-Path $Script:ModuleDir "Network-Optimizer.ps1"); Wait-ForKeyPress }
+                    '16' { Invoke-OptimizationModule -Name 'HEALTH' -ScriptPath (Join-Path $Script:ModuleDir "Health-Check.ps1"); Wait-ForKeyPress }
+                    '17' { 
+                        # Windows Store Repair
+                        Write-Section "REPARAR WINDOWS STORE"
+                        Write-Host " [i] Reparando Windows Store y dependencias..." -ForegroundColor Cyan
+                        try {
+                            Get-AppxPackage -AllUsers Microsoft.WindowsStore | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" -ErrorAction SilentlyContinue }
+                            Get-AppxPackage -AllUsers Microsoft.StorePurchaseApp | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" -ErrorAction SilentlyContinue }
+                            wsreset.exe
+                            Write-Host " [OK] Windows Store reparado." -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Host " [X] Error reparando Store: $_" -ForegroundColor Red
+                        }
+                        Wait-ForKeyPress
+                    }
                     default { Write-Host "Invalid Option" -ForegroundColor Red; Start-Sleep 1 }
                 }
             }
@@ -432,3 +463,4 @@ while ($true) {
         }
     }
 }
+

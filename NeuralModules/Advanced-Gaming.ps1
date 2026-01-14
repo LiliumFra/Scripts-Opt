@@ -383,3 +383,4 @@ function Start-AdvancedGamingOptimization {
 Start-AdvancedGamingOptimization
 Wait-ForKeyPress
 
+
