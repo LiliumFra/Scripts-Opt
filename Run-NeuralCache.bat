@@ -11,5 +11,5 @@ IF %ERRORLEVEL% NEQ 0 (
 
 :: Run PowerShell Script
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "NeuralCache-Diagnostic.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "NeuralModules\Smart-Cache-Cleaner.ps1"
 pause

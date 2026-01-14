@@ -132,11 +132,27 @@ function Save-QTable {
 }
 
 function Get-NeuralConfig {
+    $default = @{ Epsilon = $Script:QLearningConfig.EpsilonInitial; LearningCycles = 0 }
+    
     if (Test-Path $Script:ConfigPath) {
-        try { return Get-Content $Script:ConfigPath -Raw | ConvertFrom-Json }
-        catch { return @{ Epsilon = $Script:QLearningConfig.EpsilonInitial; LearningCycles = 0 } }
+        try { 
+            $loaded = Get-Content $Script:ConfigPath -Raw | ConvertFrom-Json
+            # Ensure return is a PSCustomObject
+            if (-not ($loaded -is [PSCustomObject])) {
+                return [PSCustomObject]$default
+            }
+            # Ensure properties exist
+            if (-not $loaded.PSObject.Properties['Epsilon']) { 
+                $loaded | Add-Member -MemberType NoteProperty -Name 'Epsilon' -Value $default.Epsilon 
+            }
+            if (-not $loaded.PSObject.Properties['LearningCycles']) { 
+                $loaded | Add-Member -MemberType NoteProperty -Name 'LearningCycles' -Value $default.LearningCycles 
+            }
+            return $loaded
+        }
+        catch { return [PSCustomObject]$default }
     }
-    return @{ Epsilon = $Script:QLearningConfig.EpsilonInitial; LearningCycles = 0 }
+    return [PSCustomObject]$default
 }
 
 function Save-NeuralConfig {

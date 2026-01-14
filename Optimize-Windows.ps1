@@ -39,6 +39,15 @@ $Script:ModuleDir = Join-Path -Path $Script:ScriptDir -ChildPath "NeuralModules"
 $Script:LogFile = Join-Path -Path $Script:ScriptDir -ChildPath "Neural_History.log"
 $Script:UtilsPath = Join-Path -Path $Script:ModuleDir -ChildPath "NeuralUtils.psm1"
 
+# PowerShell 7 Check
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $updateScript = Join-Path $Script:ModuleDir "Update-PowerShell.ps1"
+    if (Test-Path $updateScript) {
+        . $updateScript
+        Update-PowerShell
+    }
+}
+
 # ============================================================================
 # BOOTSTRAP
 # ============================================================================
