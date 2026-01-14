@@ -212,19 +212,33 @@ function Measure-SystemMetrics {
     }
     
     try {
-        $counters = @(
-            "\Processor(_Total)\% DPC Time", 
-            "\Processor(_Total)\% Interrupt Time",
-            "\System\Context Switches/sec",
-            "\PhysicalDisk(_Total)\Current Disk Queue Length"
-        )
-        $samples = Get-Counter -Counter $counters -SampleInterval 1 -MaxSamples $DurationSeconds -ErrorAction Stop
-        $metrics.DpcTime = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "dpc" } | Measure-Object -Property CookedValue -Average).Average, 4)
-        $metrics.InterruptTime = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "interrupt" } | Measure-Object -Property CookedValue -Average).Average, 4)
-        $metrics.ContextSwitch = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "context" } | Measure-Object -Property CookedValue -Average).Average, 0)
-        $metrics.DiskQueue = [math]::Round(($samples.CounterSamples | Where-Object { $_.Path -match "queue" } | Measure-Object -Property CookedValue -Average).Average, 2)
+        # Use WMI/CIM for Language Independence (Spanish/English compatible)
+        $procStats = Get-CimInstance -Class Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop
+        $sysStats = Get-CimInstance -Class Win32_PerfFormattedData_PerfOS_System -ErrorAction SilentlyContinue
+        $diskStats = Get-CimInstance -Class Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'" -ErrorAction SilentlyContinue
+
+        if ($procStats) {
+            $metrics.DpcTime = $procStats.PercentDPCTime
+            $metrics.InterruptTime = $procStats.PercentInterruptTime
+            $metrics.ProcessorTime = $procStats.PercentProcessorTime # Internal tracking
+        }
+        if ($sysStats) {
+            $metrics.ContextSwitch = $sysStats.ContextSwitchesPerSec
+        }
+        if ($diskStats) {
+            $metrics.DiskQueue = $diskStats.CurrentDiskQueueLength
+        }
     }
-    catch { Write-Host "   [!] Core counters unavailable" -ForegroundColor Yellow }
+    catch { 
+        Write-Host "   [!] WMI Counters unavailable. Trying legacy fallback..." -ForegroundColor Yellow 
+        # Fallback to English counters if WMI fails (rare)
+        try {
+            $counters = @("\Processor(_Total)\% DPC Time", "\Processor(_Total)\% Interrupt Time", "\System\Context Switches/sec")
+            $samples = Get-Counter -Counter $counters -SampleInterval 1 -MaxSamples 1
+            $metrics.DpcTime = ($samples.CounterSamples | Where-Object { $_.Path -match "dpc" }).CookedValue
+        }
+        catch {}
+    }
     
     try {
         $ping = Test-Connection -ComputerName "8.8.8.8" -Count 2 -ErrorAction Stop
@@ -501,7 +515,6 @@ function Show-QLearningInsights {
         $stateActions = $QTable[$State]
         Write-Host "   Top actions for state [$State]:" -ForegroundColor Gray
         $stateActions.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 5 | ForEach-Object {
-            $tweak = $Script:TweakLibrary | Where-Object { $_.Id -eq $_.Name }
             $color = if ($_.Value -gt 0) { "Green" } elseif ($_.Value -lt 0) { "Red" } else { "Gray" }
             Write-Host "     $($_.Name): Q=$([math]::Round($_.Value, 3))" -ForegroundColor $color
         }

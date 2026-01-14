@@ -1,68 +1,119 @@
-﻿{
-    "History":  [
-                    {
-                        "Metrics":  {
-                                        "DpcTime":  0,
-                                        "InterruptTime":  0,
-                                        "Score":  50
-                                    },
-                        "Hardware":  "Test-CPU-Intel-Gen13",
-                        "Timestamp":  "2026-01-14 02:52:57",
-                        "Profile":  "Neural Low Latency",
-                        "Tier":  "High",
-                        "Score":  50
-                    },
-                    {
-                        "Metrics":  {
-                                        "DpcTime":  0,
-                                        "InterruptTime":  0,
-                                        "Score":  50
-                                    },
-                        "Hardware":  "Test-CPU-Intel-Gen13",
-                        "Timestamp":  "2026-01-14 02:53:29",
-                        "Profile":  "Neural Low Latency",
-                        "Tier":  "High",
-                        "Score":  50
-                    },
-                    {
-                        "Metrics":  {
-                                        "DpcTime":  0,
-                                        "InterruptTime":  0,
-                                        "ContextSwitch":  0,
-                                        "Score":  50
-                                    },
-                        "Hardware":  "Test-CPU-Intel-Gen13",
-                        "Timestamp":  "2026-01-14 02:56:16",
-                        "Profile":  "Neural Low Latency",
-                        "Tier":  "High",
-                        "Score":  50
-                    },
-                    {
-                        "Metrics":  {
-                                        "ContextSwitch":  0,
-                                        "DpcTime":  0,
-                                        "DiskQueue":  0,
-                                        "NetworkPing":  30,
-                                        "CpuTemp":  55.1,
-                                        "Timestamp":  {
-                                                          "value":  "\/Date(1768400960624)\/",
-                                                          "DisplayHint":  2,
-                                                          "DateTime":  "miércoles, 14 de enero de 2026 11:29:20"
-                                                      },
-                                        "Score":  99,
-                                        "GpuUsage":  0,
-                                        "InterruptTime":  0
-                                    },
-                        "BaselineScore":  99,
-                        "Action":  "FSO",
-                        "Profile":  "Dashboard Quick Learn",
-                        "State":  "High|General|Morning",
-                        "Timestamp":  "2026-01-14 11:29:24",
-                        "Workload":  "General",
-                        "Tier":  "High",
-                        "Reward":  0,
-                        "Hardware":  "11th Gen Intel(R) Core(TM) i7-11370H @ 3.30GHz",
-                        "FinalScore":  99
-                    }
-                ]
+{
+  "History": [
+    {
+      "Metrics": {
+        "DpcTime": 0,
+        "InterruptTime": 0,
+        "Score": 50
+      },
+      "Hardware": "Test-CPU-Intel-Gen13",
+      "Timestamp": "2026-01-14 02:52:57",
+      "Profile": "Neural Low Latency",
+      "Tier": "High",
+      "Score": 50
+    },
+    {
+      "Metrics": {
+        "DpcTime": 0,
+        "InterruptTime": 0,
+        "Score": 50
+      },
+      "Hardware": "Test-CPU-Intel-Gen13",
+      "Timestamp": "2026-01-14 02:53:29",
+      "Profile": "Neural Low Latency",
+      "Tier": "High",
+      "Score": 50
+    },
+    {
+      "Metrics": {
+        "DpcTime": 0,
+        "InterruptTime": 0,
+        "ContextSwitch": 0,
+        "Score": 50
+      },
+      "Hardware": "Test-CPU-Intel-Gen13",
+      "Timestamp": "2026-01-14 02:56:16",
+      "Profile": "Neural Low Latency",
+      "Tier": "High",
+      "Score": 50
+    },
+    {
+      "Metrics": {
+        "ContextSwitch": 0,
+        "DpcTime": 0,
+        "DiskQueue": 0,
+        "NetworkPing": 30,
+        "CpuTemp": 55.1,
+        "Timestamp": {
+          "value": "2026-01-14T14:29:20.624Z",
+          "DisplayHint": 2,
+          "DateTime": "miércoles, 14 de enero de 2026 11:29:20"
+        },
+        "Score": 99,
+        "GpuUsage": 0,
+        "InterruptTime": 0
+      },
+      "BaselineScore": 99,
+      "Action": "FSO",
+      "Profile": "Dashboard Quick Learn",
+      "State": "High|General|Morning",
+      "Timestamp": "2026-01-14 11:29:24",
+      "Workload": "General",
+      "Tier": "High",
+      "Reward": 0,
+      "Hardware": "11th Gen Intel(R) Core(TM) i7-11370H @ 3.30GHz",
+      "FinalScore": 99
+    },
+    {
+      "Metrics": {
+        "ContextSwitch": 0,
+        "DpcTime": 0,
+        "DiskQueue": 0,
+        "NetworkPing": 29,
+        "CpuTemp": 55.1,
+        "Timestamp": {
+          "value": "2026-01-14T14:52:21.841Z",
+          "DisplayHint": 2,
+          "DateTime": "miércoles, 14 de enero de 2026 11:52:21"
+        },
+        "Score": 100,
+        "GpuUsage": 0,
+        "InterruptTime": 0
+      },
+      "BaselineScore": 100,
+      "Action": "TimerRes",
+      "Profile": "Dashboard-Manual",
+      "State": "High|General|Morning|Idle",
+      "Timestamp": "2026-01-14 11:52:26",
+      "Workload": "General",
+      "Tier": "High",
+      "Reward": 0,
+      "Hardware": "Live-Dashboard",
+      "FinalScore": 100
+    },
+    {
+      "BaselineScore": 57,
+      "Workload": "General",
+      "Action": "TimerRes",
+      "Timestamp": "2026-01-14 11:56:04",
+      "Reward": 1,
+      "State": "High|General|Morning|Idle",
+      "Metrics": {
+        "ContextSwitch": 8979,
+        "NetworkPing": 0.0,
+        "DpcTime": 0,
+        "Score": 57,
+        "InterruptTime": 0,
+        "GpuUsage": 0,
+        "ProcessorTime": 9,
+        "CpuTemp": 55.1,
+        "DiskQueue": 0,
+        "Timestamp": "2026-01-14T11:55:58.3410077-03:00"
+      },
+      "FinalScore": 58,
+      "Profile": "Dashboard-Manual",
+      "Tier": "High",
+      "Hardware": "Live-Dashboard"
+    }
+  ]
 }

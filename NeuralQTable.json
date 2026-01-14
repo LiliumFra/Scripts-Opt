@@ -1,5 +1,5 @@
-﻿{
-    "High|General|Morning":  {
-                                 "FSO":  0
-                             }
+{
+  "High|General|Morning|Idle": {
+    "TimerRes": 0.1
+  }
 }

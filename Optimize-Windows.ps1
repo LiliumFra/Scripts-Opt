@@ -40,7 +40,14 @@ $Script:LogFile = Join-Path -Path $Script:ScriptDir -ChildPath "Neural_History.l
 $Script:UtilsPath = Join-Path -Path $Script:ModuleDir -ChildPath "NeuralUtils.psm1"
 
 # PowerShell 7 Check
+# PowerShell 7 Auto-Switch
 if ($PSVersionTable.PSVersion.Major -lt 7) {
+    if (Get-Command "pwsh" -ErrorAction SilentlyContinue) {
+        Write-Host " [i] PowerShell 7 detected. Switching environment..." -ForegroundColor Cyan
+        Start-Process "pwsh" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\Optimize-Windows.ps1`"" -Verb RunAs
+        exit
+    }
+    
     $updateScript = Join-Path $Script:ModuleDir "Update-PowerShell.ps1"
     if (Test-Path $updateScript) {
         . $updateScript
