@@ -1,6 +1,6 @@
 # Check-Dashboard.ps1
 
-$file = "d:\josef\Documents\Scripts Opt\NeuralModules\Neural-Dashboard.ps1"
+$file = Join-Path $PSScriptRoot "NeuralModules\Neural-Dashboard.ps1"
 $lines = Get-Content $file
 $balance = 0
 

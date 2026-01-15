@@ -65,7 +65,7 @@ if (-not (Test-Path $Script:UtilsPath)) {
 }
 
 Import-Module $Script:UtilsPath -Force -DisableNameChecking
-Import-Module "d:\josef\Documents\Scripts Opt\NeuralModules\NeuralLocalization.psm1" -Force -DisableNameChecking
+Import-Module (Join-Path -Path $Script:ModuleDir -ChildPath "NeuralLocalization.psm1") -Force -DisableNameChecking
 
 # CRITICAL: Validate OS before proceeding
 Assert-SupportedOS
