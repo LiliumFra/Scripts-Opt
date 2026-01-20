@@ -428,14 +428,84 @@ function Get-CurrentState {
 }
 
 function Get-AvailableActions {
-    param([string]$RiskLevel = "Low")
-    $actions = @()
-    foreach ($tweak in $Script:TweakLibrary) {
-        if ($RiskLevel -eq "All" -or $tweak.Risk -eq $RiskLevel -or ($RiskLevel -eq "Medium" -and $tweak.Risk -eq "Low")) {
-            $actions += $tweak.Id
+    param(
+        [string]$RiskLevel = "Low",
+        [string]$Workload = "General",
+        [object]$Hardware = $null
+    )
+    
+    # Detect hardware if not provided
+    if (-not $Hardware) {
+        $Hardware = @{
+            HasNvidia = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "NVIDIA" }).Count -gt 0
+            HasAMD    = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "AMD|Radeon" }).Count -gt 0
+            HasIntel  = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "Intel" }).Count -gt 0
+            IsLenovo  = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).Manufacturer -match "Lenovo"
+            IsLaptop  = (Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)
+            HasSSD    = (Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -eq "SSD" -or $_.MediaType -eq "NVMe" }).Count -gt 0
         }
     }
-    return $actions
+    
+    # Define workload-specific category priorities
+    $categoryPriorities = switch ($Workload) {
+        "Gaming" { @("Latency", "GPU", "Gaming", "Input", "Memory", "Scheduler", "Network") }
+        "Productivity" { @("UI", "System", "Memory", "Storage", "Privacy") }
+        "Audio" { @("Audio", "Latency", "System", "Memory") }
+        "Streaming" { @("Network", "GPU", "System", "Memory") }
+        "Development" { @("System", "Storage", "Memory", "UI", "Privacy") }
+        default { @("Latency", "Gaming", "Memory", "System", "Network", "UI", "Input", "Storage", "Privacy", "Scheduler", "Audio", "GPU", "Kernel", "Security") }
+    }
+    
+    $actions = @()
+    
+    foreach ($tweak in $Script:TweakLibrary) {
+        # 1. Risk Filter
+        $riskOk = ($RiskLevel -eq "All") -or 
+        ($tweak.Risk -eq $RiskLevel) -or 
+        ($RiskLevel -eq "Medium" -and $tweak.Risk -eq "Low") -or
+        ($RiskLevel -eq "High" -and $tweak.Risk -in @("Low", "Medium"))
+        
+        if (-not $riskOk) { continue }
+        
+        # 2. Hardware-specific exclusions
+        # Skip NVIDIA tweaks on non-NVIDIA systems
+        if ($tweak.Id -match "^Nv|NVIDIA" -and -not $Hardware.HasNvidia) { continue }
+        
+        # Skip Lenovo tweaks on non-Lenovo systems
+        if ($tweak.Category -eq "Lenovo" -and -not $Hardware.IsLenovo) { continue }
+        
+        # Skip power/AHCI tweaks on desktops (optional - laptops benefit more)
+        if ($tweak.Category -eq "Power" -and -not $Hardware.IsLaptop -and $tweak.Risk -eq "Medium") { continue }
+        
+        # Skip SSD-specific tweaks on HDD-only systems
+        if ($tweak.Id -in @("Prefetch", "Superfetch", "WSearch", "SysMain") -and -not $Hardware.HasSSD) { continue }
+        
+        # 3. Condition script check
+        if ($tweak.ConditionScript) {
+            try {
+                $canApply = Invoke-Expression $tweak.ConditionScript
+                if (-not $canApply) { continue }
+            }
+            catch { continue }
+        }
+        
+        # 4. Category priority scoring
+        $priorityIndex = $categoryPriorities.IndexOf($tweak.Category)
+        if ($priorityIndex -lt 0) { $priorityIndex = 100 } # Low priority for uncategorized
+        
+        # Add with priority metadata
+        $actions += [PSCustomObject]@{
+            Id       = $tweak.Id
+            Priority = $priorityIndex
+            Category = $tweak.Category
+            Risk     = $tweak.Risk
+        }
+    }
+    
+    # Sort by priority and return just IDs
+    $sortedActions = $actions | Sort-Object Priority | Select-Object -ExpandProperty Id
+    
+    return $sortedActions
 }
 
 function Get-QValue {
@@ -552,7 +622,8 @@ function Invoke-NeuralLearning {
     $baselineScore = $baselineMetrics.Score
     Write-Host "   [BASELINE] Score: $baselineScore/100" -ForegroundColor Yellow
     
-    $availableActions = Get-AvailableActions -RiskLevel "Low"
+    $availableActions = Get-AvailableActions -RiskLevel "Low" -Workload $Workload -Hardware $Hardware
+    Write-Host "   [AI] Available Actions: $($availableActions.Count) tweaks (filtered by context)\" -ForegroundColor DarkGray
     $selectedAction = Select-Action -QTable $qTable -State $state -AvailableActions $availableActions -Epsilon $epsilon
     
     $newScore = $baselineScore
@@ -816,9 +887,10 @@ function Start-NeuralAutoPilot {
             }
         }
         
-        # 4. Action Selection
+        # 4. Action Selection (using intelligent filtering)
         $state = Get-CurrentState -Hardware $hardware -Workload "AutoPilot"
-        $action = Get-BestAction -QTable $qTable -State $state -AvailableActions $Script:TweakLibrary.Id -Epsilon $epsilon
+        $availableActions = Get-AvailableActions -RiskLevel "Medium" -Workload "AutoPilot" -Hardware $hardware
+        $action = Get-BestAction -QTable $qTable -State $state -AvailableActions $availableActions -Epsilon $epsilon
         
         if ($action) {
             Write-Host "   [ACT] Applying Tweak: $action" -ForegroundColor White
@@ -835,7 +907,7 @@ function Start-NeuralAutoPilot {
                 
                 # Update Q-Table
                 $newState = Get-CurrentState -Hardware $hardware -Workload "AutoPilot"
-                Update-QValue -QTable $qTable -State $state -Action $action -Reward $reward -NewState $newState -AvailableActions $Script:TweakLibrary.Id
+                Update-QValue -QTable $qTable -State $state -Action $action -Reward $reward -NewState $newState -AvailableActions $availableActions
                 
                 # History
                 $record = @{ Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; State = $state; Action = $action; Reward = $reward; Mode = "AutoPilot" }
