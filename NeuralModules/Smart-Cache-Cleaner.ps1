@@ -121,10 +121,15 @@ function Update-CleanupHistory {
 }
 
 function Get-SystemScoreQuick {
+    # Fast score calculation with timeout protection
     try {
-        $cpu = (Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 1).CounterSamples[0].CookedValue
-        $mem = (Get-CimInstance Win32_OperatingSystem)
-        $memPct = [math]::Round(($mem.FreePhysicalMemory / $mem.TotalVisibleMemorySize) * 100, 1)
+        # Use CIM instead of Get-Counter (faster, no locale issues)
+        $proc = Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction SilentlyContinue -OperationTimeoutSec 3
+        $cpu = if ($proc) { $proc.PercentProcessorTime } else { 50 }
+        
+        $mem = Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue -OperationTimeoutSec 3
+        $memPct = if ($mem) { [math]::Round(($mem.FreePhysicalMemory / $mem.TotalVisibleMemorySize) * 100, 1) } else { 50 }
+        
         return [math]::Round((100 - $cpu) * 0.5 + $memPct * 0.5, 1)
     }
     catch { return 50 }
@@ -140,11 +145,28 @@ function Get-AllUserProfiles {
 
 function Invoke-ServiceControl {
     param([string[]]$Services, [string]$Action)
+    $timeout = 5 # seconds per service
+    
     foreach ($s in $Services) {
-        $svc = Get-Service -Name $s -ErrorAction SilentlyContinue
-        if ($svc) {
-            if ($Action -eq "Stop") { Stop-Service -Name $s -Force -ErrorAction SilentlyContinue }
-            else { Start-Service -Name $s -ErrorAction SilentlyContinue }
+        try {
+            $svc = Get-Service -Name $s -ErrorAction SilentlyContinue
+            if (-not $svc) { continue }
+            
+            if ($Action -eq "Stop") {
+                # Non-blocking stop with timeout
+                $job = Start-Job -ScriptBlock { param($name) Stop-Service -Name $name -Force -ErrorAction SilentlyContinue } -ArgumentList $s
+                $null = Wait-Job $job -Timeout $timeout
+                Remove-Job $job -Force -ErrorAction SilentlyContinue
+            }
+            else {
+                # Non-blocking start with timeout
+                $job = Start-Job -ScriptBlock { param($name) Start-Service -Name $name -ErrorAction SilentlyContinue } -ArgumentList $s
+                $null = Wait-Job $job -Timeout $timeout
+                Remove-Job $job -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            # Service control failed, continue silently
         }
     }
 }
@@ -229,29 +251,68 @@ function Invoke-NeuralCacheScan {
     Write-Host " Scanning with AI prioritization..." -ForegroundColor Cyan
     Write-Host ""
     
+    $scanTimeout = 10 # seconds per location
+    $scannedCount = 0
+    $skippedCount = 0
+    
     foreach ($loc in $locations) {
         $pathsArr = @($loc.Path)
         foreach ($pStr in $pathsArr) {
             if (Test-Path $pStr) {
-                $measure = Get-ChildItem -Path $pStr -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
-                if ($measure.Count -gt 0) {
-                    $sizeMB = [math]::Round($measure.Sum / 1MB, 2)
-                    $cacheInfo = @{ Name = $loc.Name; Category = $loc.Cat; SizeMB = $sizeMB }
-                    $priority = Get-CachePriority -CacheInfo $cacheInfo -Context $context -History $history
-                    
-                    $scanResults += [PSCustomObject]@{
-                        Name     = $loc.Name
-                        Path     = $pStr
-                        SizeMB   = $sizeMB
-                        Files    = $measure.Count
-                        Category = $loc.Cat
-                        Priority = $priority
-                        Services = $loc.Svc
-                        Process  = $loc.Proc
+                Write-Host " Scanning $($loc.Name)..." -NoNewline -ForegroundColor DarkGray
+                
+                # Use job with timeout to prevent hanging on unresponsive paths
+                $job = Start-Job -ScriptBlock {
+                    param($path)
+                    try {
+                        Get-ChildItem -Path $path -Recurse -File -Force -ErrorAction SilentlyContinue | 
+                        Measure-Object -Property Length -Sum
                     }
+                    catch { $null }
+                } -ArgumentList $pStr
+                
+                $completed = Wait-Job $job -Timeout $scanTimeout
+                
+                if ($completed) {
+                    $measure = Receive-Job $job -ErrorAction SilentlyContinue
+                    Remove-Job $job -Force -ErrorAction SilentlyContinue
+                    
+                    if ($measure -and $measure.Count -gt 0) {
+                        $sizeMB = [math]::Round($measure.Sum / 1MB, 2)
+                        $cacheInfo = @{ Name = $loc.Name; Category = $loc.Cat; SizeMB = $sizeMB }
+                        $priority = Get-CachePriority -CacheInfo $cacheInfo -Context $context -History $history
+                        
+                        $scanResults += [PSCustomObject]@{
+                            Name     = $loc.Name
+                            Path     = $pStr
+                            SizeMB   = $sizeMB
+                            Files    = $measure.Count
+                            Category = $loc.Cat
+                            Priority = $priority
+                            Services = $loc.Svc
+                            Process  = $loc.Proc
+                        }
+                        Write-Host " $sizeMB MB" -ForegroundColor Gray
+                        $scannedCount++
+                    }
+                    else {
+                        Write-Host " (empty)" -ForegroundColor DarkGray
+                    }
+                }
+                else {
+                    # Timeout - skip this location
+                    Stop-Job $job -ErrorAction SilentlyContinue
+                    Remove-Job $job -Force -ErrorAction SilentlyContinue
+                    Write-Host " [TIMEOUT - skipped]" -ForegroundColor Yellow
+                    $skippedCount++
                 }
             }
         }
+    }
+    
+    if ($skippedCount -gt 0) {
+        Write-Host ""
+        Write-Host " [!] $skippedCount locations skipped due to timeout" -ForegroundColor Yellow
     }
     
     # Sort by AI priority
