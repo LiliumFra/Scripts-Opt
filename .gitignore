@@ -14,3 +14,4 @@ NeuralConfig.json
 # Temporary
 *_old.ps1
 *_backup.ps1
+.claude/agents/Thinking-Beast-Mode.md

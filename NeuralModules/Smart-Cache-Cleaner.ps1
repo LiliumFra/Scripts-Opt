@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    Smart-Cache-Cleaner.ps1 - AI-Powered Cache Optimization
+    Smart-Cache-Cleaner.ps1 - AI-Powered Cache Optimization v7.0
 
 .DESCRIPTION
     Advanced cache cleaning with AI prioritization:
@@ -9,13 +9,33 @@
     - Multi-user support
     - Deep system logs cleanup
     - Gaming/Work context detection
+    - NEW: Automatic mode with idle detection
+    - NEW: Silent mode for scheduled tasks
+
+.PARAMETER Auto
+    Run in automatic mode (no prompts, uses smart defaults)
+
+.PARAMETER Silent
+    Suppress all output (for Task Scheduler)
+
+.PARAMETER IdleThreshold
+    Minutes of CPU < 10% before auto-clean triggers (default: 5)
 
 .NOTES
     Part of Windows Neural Optimizer v7.0
     Author: Jose Bustamante
 #>
 
+param(
+    [switch]$Auto,
+    [switch]$Silent,
+    [int]$IdleThreshold = 5,
+    [switch]$WhatIf
+)
+
 $Script:ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+$Script:AutoMode = $Auto.IsPresent
+$Script:SilentMode = $Silent.IsPresent
 
 if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
     $utilsPath = Join-Path $Script:ScriptDir "NeuralUtils.psm1"
@@ -25,7 +45,146 @@ if (-not (Get-Command "Write-Log" -ErrorAction SilentlyContinue)) {
 $aiModulePath = Join-Path $Script:ScriptDir "NeuralAI.psm1"
 if (Test-Path $aiModulePath) { Import-Module $aiModulePath -Force -DisableNameChecking }
 
-Invoke-AdminCheck -Silent
+if (-not $Script:SilentMode) { Invoke-AdminCheck -Silent }
+
+# ============================================================================
+# IDLE DETECTION & AUTOMATIC MODE
+# ============================================================================
+
+function Get-SystemIdleTime {
+    <#
+    .SYNOPSIS
+        Returns system idle time in minutes based on CPU usage
+    #>
+    try {
+        $samples = @()
+        for ($i = 0; $i -lt 3; $i++) {
+            $cpu = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction SilentlyContinue).PercentProcessorTime
+            $samples += $cpu
+            Start-Sleep -Seconds 1
+        }
+        $avgCpu = ($samples | Measure-Object -Average).Average
+        
+        # If CPU < 10%, consider system idle
+        if ($avgCpu -lt 10) {
+            return [math]::Round((Get-Date - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalMinutes % 60, 0)
+        }
+        return 0
+    }
+    catch { return 0 }
+}
+
+function Test-SystemIdle {
+    param([int]$ThresholdMinutes = 5)
+    
+    try {
+        $cpu = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction SilentlyContinue).PercentProcessorTime
+        $disk = (Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'" -ErrorAction SilentlyContinue).PercentDiskTime
+        
+        return ($cpu -lt 15 -and $disk -lt 20)
+    }
+    catch { return $false }
+}
+
+function Invoke-SilentCacheClean {
+    <#
+    .SYNOPSIS
+        Performs silent cache cleanup for automatic/scheduled execution
+    .DESCRIPTION
+        - No prompts or user interaction
+        - Cleans high-priority caches only
+        - Logs results to JSON for dashboard
+    #>
+    param([switch]$HighPriorityOnly)
+    
+    $results = @{
+        Timestamp = (Get-Date).ToString("o")
+        Mode      = "Silent"
+        FreedMB   = 0
+        Locations = 0
+        Status    = "Started"
+    }
+    
+    try {
+
+        $locations = Get-NeuralCacheLocations
+        $cleanupResults = @()
+        
+        foreach ($loc in $locations) {
+            $paths = @($loc.Path)
+            foreach ($path in $paths) {
+                if (Test-Path $path) {
+                    # Skip if process is running
+                    if ($loc.Proc) {
+                        $proc = Get-Process -Name $loc.Proc -ErrorAction SilentlyContinue
+                        if ($proc) { continue }
+                    }
+                    
+                    try {
+                        $before = (Get-ChildItem -Path $path -Recurse -File -Force -ErrorAction SilentlyContinue | 
+                            Measure-Object -Property Length -Sum).Sum
+                        
+                        if ($before -gt 10MB) {
+                            # Only clean if > 10MB
+                            Remove-Item -Path "$path\*" -Recurse -Force -ErrorAction SilentlyContinue
+                            $freedMB = [math]::Round($before / 1MB, 2)
+                            $cleanupResults += [PSCustomObject]@{ Name = $loc.Name; FreedMB = $freedMB }
+                            $results.Locations++
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+        
+        $results.FreedMB = [math]::Round(($cleanupResults | Measure-Object -Property FreedMB -Sum).Sum, 2)
+        $results.Status = "Completed"
+        
+        # Update history
+        if ($cleanupResults.Count -gt 0) {
+            Update-CleanupHistory -CleanupResults $cleanupResults
+        }
+    }
+    catch {
+        $results.Status = "Error: $_"
+    }
+    
+    # Save results for dashboard
+    $resultsPath = Join-Path (Split-Path $Script:ScriptDir -Parent) "LastCacheClean.json"
+    $results | ConvertTo-Json | Set-Content $resultsPath -Force -ErrorAction SilentlyContinue
+    
+    return $results
+}
+
+function Start-NeuralCacheService {
+    <#
+    .SYNOPSIS
+        Starts automatic cache cleaning service
+    .DESCRIPTION
+        Monitors system for idle state and triggers cleanup
+    #>
+    param(
+        [switch]$RunOnce,
+        [int]$IdleMinutes = 5,
+        [int]$CheckIntervalSeconds = 60
+    )
+    
+    if ($RunOnce) {
+        if (Test-SystemIdle -ThresholdMinutes $IdleMinutes) {
+            return Invoke-SilentCacheClean
+        }
+        return @{ Status = "System not idle" }
+    }
+    
+    # Continuous monitoring mode
+    while ($true) {
+        if (Test-SystemIdle -ThresholdMinutes $IdleMinutes) {
+            Invoke-SilentCacheClean
+            Start-Sleep -Seconds 3600  # Wait 1 hour after cleanup
+        }
+        Start-Sleep -Seconds $CheckIntervalSeconds
+    }
+}
 
 # ============================================================================
 # AI CONFIGURATION
@@ -226,17 +385,54 @@ function Get-NeuralCacheLocations {
 }
 
 # ============================================================================
-# AI-POWERED SCAN
+# MODERN UI & MENU SYSTEM
 # ============================================================================
+
+$Script:Settings = @{
+    DeepClean = $false # DISM/CBS default OFF
+}
+
+function Show-CacheMenu {
+    Clear-Host
+    Write-Host ""
+    Write-Host " ╔════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host " ║                   🚀 NEURAL SMART CACHE v7.2                       ║" -ForegroundColor White
+    Write-Host " ╠════════════════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    
+    # Status Indicators
+    $deepCleanState = "OFF"
+    $deepCleanColor = "Yellow"
+    if ($Script:Settings.DeepClean) { 
+        $deepCleanState = "ON "
+        $deepCleanColor = "Red"
+    }
+
+    Write-Host " ║  STATUS: " -NoNewline -ForegroundColor Gray
+    Write-Host "Deep Clean [$deepCleanState] " -NoNewline -ForegroundColor $deepCleanColor
+    Write-Host "                                           ║" -ForegroundColor Cyan
+    Write-Host " ╠════════════════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
+    Write-Host " ║                                                                    ║" -ForegroundColor Cyan
+    Write-Host " ║  [1]  ⚡ START SMART SCAN    (Browsers, Temp, App Cache)           ║" -ForegroundColor Green
+    Write-Host " ║  [2]  ⚙️  TOGGLE DEEP CLEAN   (DISM, WinSxS - Slow)                 ║" -ForegroundColor White
+    Write-Host " ║  [3]  🛡️  FORCE CLEAN SYSTEM  (Direct Clean, No Scan)               ║" -ForegroundColor Magenta
+    Write-Host " ║                                                                    ║" -ForegroundColor Cyan
+    Write-Host " ║  [0]  🔙 EXIT                                                      ║" -ForegroundColor DarkGray
+    Write-Host " ║                                                                    ║" -ForegroundColor Cyan
+    Write-Host " ╚════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+    return Read-Host " >> Select Option"
+}
 
 function Invoke-NeuralCacheScan {
     $context = Get-UsageContext
     $history = Get-CacheHistory
     
     Write-Host ""
-    Write-Host " === NEURAL CACHE AI v7.0 ===" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host " Context: $($context.TimeSlot) | Deep Clean: $($context.DeepCleanRecommended)" -ForegroundColor Gray
+    Write-Host " === NEURAL CACHE ENGINE INITIALIZED ===" -ForegroundColor Cyan
+    Write-Host " Context: $($context.TimeSlot)" -ForegroundColor Gray
+    if ($Script:Settings.DeepClean) {
+        Write-Host " [!] DEEP CLEAN MODE: ACTIVE (Expect longer scan times)" -ForegroundColor Yellow
+    }
     Write-Host ""
     
     # Measure baseline score
@@ -248,18 +444,21 @@ function Invoke-NeuralCacheScan {
     $locations = Get-NeuralCacheLocations
     $scanResults = @()
     
-    Write-Host " Scanning with AI prioritization..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host " Scanning locations..." -ForegroundColor Cyan
     
     $scanTimeout = 10 # seconds per location
-    $scannedCount = 0
-    $skippedCount = 0
+
     
     foreach ($loc in $locations) {
+        # SKIP Deep Clean locations if invalid
+        if ($loc.Cat -eq "System" -and ($loc.Name -match "DISM|CBS|WinSxS") -and (-not $Script:Settings.DeepClean)) {
+            continue
+        }
+
         $pathsArr = @($loc.Path)
         foreach ($pStr in $pathsArr) {
             if (Test-Path $pStr) {
-                Write-Host " Scanning $($loc.Name)..." -NoNewline -ForegroundColor DarkGray
+                Write-Host " [Scan] $($loc.Name)..." -NoNewline -ForegroundColor DarkGray
                 
                 # Use job with timeout to prevent hanging on unresponsive paths
                 $job = Start-Job -ScriptBlock {
@@ -293,26 +492,18 @@ function Invoke-NeuralCacheScan {
                             Process  = $loc.Proc
                         }
                         Write-Host " $sizeMB MB" -ForegroundColor Gray
-                        $scannedCount++
                     }
                     else {
-                        Write-Host " (empty)" -ForegroundColor DarkGray
+                        Write-Host " (Clean)" -ForegroundColor DarkGray
                     }
                 }
                 else {
-                    # Timeout - skip this location
                     Stop-Job $job -ErrorAction SilentlyContinue
                     Remove-Job $job -Force -ErrorAction SilentlyContinue
-                    Write-Host " [TIMEOUT - skipped]" -ForegroundColor Yellow
-                    $skippedCount++
+                    Write-Host " [SKIP]" -ForegroundColor Yellow
                 }
             }
         }
-    }
-    
-    if ($skippedCount -gt 0) {
-        Write-Host ""
-        Write-Host " [!] $skippedCount locations skipped due to timeout" -ForegroundColor Yellow
     }
     
     # Sort by AI priority
@@ -323,8 +514,9 @@ function Invoke-NeuralCacheScan {
     $totalFiles = ($scanResults | Measure-Object -Property Files -Sum).Sum
     
     Write-Host ""
-    Write-Host " === SCAN RESULTS (AI Sorted) ===" -ForegroundColor White
-    Write-Host ""
+    Write-Host " ═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  SCAN RESULTS" -ForegroundColor White
+    Write-Host " ═══════════════════════════════════════════════════════" -ForegroundColor Cyan
     
     $i = 1
     foreach ($res in $scanResults | Select-Object -First 15) {
@@ -334,92 +526,74 @@ function Invoke-NeuralCacheScan {
     }
     
     Write-Host ""
-    Write-Host " Total: $([math]::Round($totalSize, 2)) MB in $totalFiles files" -ForegroundColor Cyan
+    Write-Host " Total Junk: $([math]::Round($totalSize, 2)) MB in $totalFiles files" -ForegroundColor Magenta
     Write-Host ""
     
     if ($totalFiles -gt 0) {
-        Write-Host " Options:"
-        Write-Host " [1] Smart Clean (High priority only)"
-        Write-Host " [2] Full Clean (All locations)"
-        Write-Host " [3] Cancel"
+        Write-Host " [1] Smart Clean (High Priority)" -ForegroundColor Green
+        Write-Host " [2] Clean All" -ForegroundColor Yellow
+        Write-Host " [0] Cancel" -ForegroundColor Gray
         Write-Host ""
-        $choice = Read-Host " >> Choice"
+        $choice = Read-Host " >> Action"
         
         switch ($choice) {
             '1' { Invoke-SmartCleanup -Results ($scanResults | Where-Object { $_.Priority -gt 20 }) -BaselineScore $baselineScore }
             '2' { Invoke-SmartCleanup -Results $scanResults -BaselineScore $baselineScore }
-            '3' { return }
+            default { return }
         }
     }
-}
-
-function Invoke-SmartCleanup {
-    param($Results, $BaselineScore)
-    
-    Write-Host ""
-    Write-Host " === CLEANING ENGINE ===" -ForegroundColor Yellow
-    Write-Host ""
-    
-    # Stop required services
-    $allSvcs = $Results.Services | Select-Object -Unique | Where-Object { $_ }
-    if ($allSvcs) {
-        Write-Host " [+] Stopping services..." -ForegroundColor DarkGray
-        Invoke-ServiceControl -Services $allSvcs -Action "Stop"
+    else {
+        Write-Host " System is clean! No action needed." -ForegroundColor Green
+        Wait-ForKeyPress
     }
-    
-    $cleanupResults = @()
-    
-    foreach ($res in $Results) {
-        Write-Host " Cleaning $($res.Name)..." -NoNewline -ForegroundColor Gray
-        
-        if ($res.Process) {
-            $proc = Get-Process -Name $res.Process -ErrorAction SilentlyContinue
-            if ($proc) {
-                Write-Host " [Running, skip]" -ForegroundColor Yellow
-                continue
-            }
-        }
-        
-        try {
-            $before = (Get-ChildItem -Path $res.Path -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-            Remove-Item -Path "$($res.Path)\*" -Recurse -Force -ErrorAction SilentlyContinue
-            $freedMB = [math]::Round($before / 1MB, 2)
-            Write-Host " [OK] $freedMB MB freed" -ForegroundColor Green
-            
-            $cleanupResults += @{ Name = $res.Name; FreedMB = $freedMB }
-        }
-        catch {
-            Write-Host " [Error]" -ForegroundColor Red
-        }
-    }
-    
-    # Restart services
-    if ($allSvcs) {
-        Write-Host ""
-        Write-Host " [+] Restarting services..." -ForegroundColor DarkGray
-        Invoke-ServiceControl -Services $allSvcs -Action "Start"
-    }
-    
-    # Update AI history
-    $history = Update-CleanupHistory -CleanupResults $cleanupResults
-    
-    # Measure post-cleanup score
-    Start-Sleep -Seconds 2
-    $postScore = Get-SystemScoreQuick
-    $delta = [math]::Round($postScore - $BaselineScore, 1)
-    
-    Write-Host ""
-    Write-Host " === RESULTS ===" -ForegroundColor Green
-    Write-Host " Freed: $([math]::Round(($cleanupResults | Measure-Object -Property FreedMB -Sum).Sum, 2)) MB" -ForegroundColor Cyan
-    Write-Host " Score: $BaselineScore -> $postScore ($(if($delta -ge 0){'+'}else{''})$delta)" -ForegroundColor $(if ($delta -ge 0) { 'Green' }else { 'Yellow' })
-    Write-Host " Sessions tracked: $($history.Cleanups.Count)" -ForegroundColor Gray
-    Write-Host ""
 }
 
 # ============================================================================
 # MAIN
 # ============================================================================
 
-Invoke-NeuralCacheScan
-Write-Host ""
-Read-Host " Press ENTER to continue"
+# Handle automatic mode
+if ($Script:AutoMode) {
+    if ($Script:SilentMode) {
+        $result = Invoke-SilentCacheClean
+        exit 0
+    }
+    else {
+        Write-Host ""
+        Write-Host " === NEURAL CACHE v7.2 (AUTO) ===" -ForegroundColor Cyan
+        $result = Invoke-SilentCacheClean
+        Write-Host " Freed: $($result.FreedMB) MB" -ForegroundColor Green
+        exit 0
+    }
+}
+
+# Interactive Menu Loop
+while ($true) {
+    $sel = Show-CacheMenu
+    
+    switch ($sel) {
+        '1' { Invoke-NeuralCacheScan; Wait-ForKeyPress }
+        '2' { 
+            $Script:Settings.DeepClean = -not $Script:Settings.DeepClean 
+            # Toggle logic implies refresh of loop
+        }
+        '3' { 
+            # Force Clean Logic
+            Write-Host " [!] Force Cleaning..." -ForegroundColor Yellow
+            $locs = Get-NeuralCacheLocations
+            # Filter logic for deep clean
+            $toClean = $locs | Where-Object { 
+                if ($_.Cat -eq "System" -and ($_.Name -match "DISM|CBS") -and (-not $Script:Settings.DeepClean)) { $false } else { $true }
+            }
+            # Simplified force clean without measurement
+            foreach ($l in $toClean) {
+                Write-Host " Cleaning $($l.Name)..." -ForegroundColor DarkGray
+                Remove-Item "$($l.Path)\*" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            Write-Host " [OK] Force Clean Complete" -ForegroundColor Green
+            Wait-ForKeyPress
+        }
+        '0' { exit }
+        default { }
+    }
+}

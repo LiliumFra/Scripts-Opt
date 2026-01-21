@@ -84,7 +84,8 @@ if (-not (Test-AdminPrivileges)) {
     }
     
     try {
-        $scriptPath = if ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { $PSCommandPath }
+        $scriptPath = $PSCommandPath
+        if ($MyInvocation.MyCommand.Path) { $scriptPath = $MyInvocation.MyCommand.Path }
         $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
         if ($SkipRestore) { $arguments += " -SkipRestore" }
         if ($Silent) { $arguments += " -Silent" }
@@ -223,14 +224,20 @@ function Show-Banner {
 }
 
 function Show-Menu {
+    Show-NeuralHeader -Title "WINDOWS NEURAL OPTIMIZER" -Version $Script:Version -ProcessCategory "MAIN MENU"
+    
+    $uptime = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    $uptimeSpan = (Get-Date) - $uptime
+    $uptimeStr = "{0:D2}:{1:D2}" -f [int]$uptimeSpan.TotalHours, $uptimeSpan.Minutes
+    Write-Host "   System Uptime: $uptimeStr" -ForegroundColor DarkGray
+    Write-Host ""
+    
     Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host " ║                MAIN MENU                              ║" -ForegroundColor White
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ 1.  🚀 QUICK OPTIMIZE (Recommended)                   ║" -ForegroundColor Green
+    Write-Host " ║ 1.  🚀 QUICK OPTIMIZER (Recommended)                  ║" -ForegroundColor Green
     Write-Host " ║     (Boot, Debloat, Disk, Gaming Standard)            ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host \" ║ 2.  🧠 SMART OPTIMIZER                                 ║\" -ForegroundColor Magenta
-    Write-Host \" ║     (Auto-detects hardware, applies optimal tweaks)    ║\" -ForegroundColor Gray
+    Write-Host " ║ 2.  🧠 SMART OPTIMIZER                                ║" -ForegroundColor Magenta
+    Write-Host " ║     (Auto-detects hardware, applies optimal tweaks)   ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
     Write-Host " ║ 3.  🛠️ ADVANCED TOOLS                                 ║" -ForegroundColor Yellow
     Write-Host " ║     (Manual selection, Ultra Tweaks, Network, SSD)    ║" -ForegroundColor Gray
@@ -245,41 +252,32 @@ function Show-Menu {
 }
 
 function Show-AdvancedMenu {
-    Clear-Host
-    Write-Host " ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host " ║              ADVANCED TOOLS v6.5                      ║" -ForegroundColor Yellow
-    Write-Host " ╠═══════════════════════════════════════════════════════╣" -ForegroundColor Cyan
-    Write-Host " ║ [STANDARD MODULES]                                    ║" -ForegroundColor White
-    Write-Host " ║ 1. Boot Optimization                                  ║" -ForegroundColor Gray
-    Write-Host " ║ 2. Debloat Suite (Apps + Privacy + AI Block)          ║" -ForegroundColor Gray
-    Write-Host " ║ 3. Disk Hygiene (Cleanup)                             ║" -ForegroundColor Gray
-    Write-Host " ║ 4. Gaming Optimization (Standard)                     ║" -ForegroundColor Gray
-    Write-Host " ║ 5. Thermal Optimization                               ║" -ForegroundColor Gray
+    Show-NeuralHeader -Title "NEURAL TOOLS" -Version "v7.0" -ProcessCategory "ADVANCED"
+    Write-Host " ║ [SYSTEM CORE]                                         ║" -ForegroundColor White
+    Write-Host " ║ 1.  Boot Optimizer (Startup Manager)                  ║" -ForegroundColor Gray
+    Write-Host " ║ 2.  Debloat Suite (Remove Apps + Telemetry)           ║" -ForegroundColor Gray
+    Write-Host " ║ 3.  Disk Hygiene (Log Cleanup)                        ║" -ForegroundColor Gray
+    Write-Host " ║ 4.  Update Manager (Pause/Defer Updates)              ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ [ULTRA MODULES]                                       ║" -ForegroundColor Magenta
-    Write-Host " ║ 6. Advanced Gaming (MSI, HPET, VBS, Nagle)            ║" -ForegroundColor Magenta
-    Write-Host " ║ 7. Advanced Memory (Pools, Pagefile)                  ║" -ForegroundColor Magenta
-    Write-Host " ║ 8. SSD/NVMe Optimizer                                 ║" -ForegroundColor Magenta
-    Write-Host " ║ 9. Performance Extreme (Timer, C-States, DPC)         ║" -ForegroundColor Red
+    Write-Host " ║ [PERFORMANCE & GAMING]                                ║" -ForegroundColor Magenta
+    Write-Host " ║ 5.  Gaming Optimization (Standard)                    ║" -ForegroundColor Gray
+    Write-Host " ║ 6.  Steam Optimizer (Minimal/LowSpec Modes)           ║" -ForegroundColor Magenta
+    Write-Host " ║ 7.  Neural RAM Cache (PrimoCache AI Clone)            ║" -ForegroundColor Magenta
+    Write-Host " ║ 8.  Thermal Optimization (CPU/GPU)                    ║" -ForegroundColor Gray
+    Write-Host " ║ 9.  Advanced Memory (Pools, Pagefile)                 ║" -ForegroundColor Gray
+    Write-Host " ║ 10. SSD/NVMe Optimizer (TRIM/I/O)                     ║" -ForegroundColor Gray
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ [NEW v6.5 MODULES]                                    ║" -ForegroundColor Green
-    Write-Host " ║ 10. Privacy Guardian (30+ Tweaks)                     ║" -ForegroundColor Green
-    Write-Host " ║ 11. Neural Cache (60+ Locations)                      ║" -ForegroundColor Green
-    Write-Host " ║ 12. Update Manager (Defer, Pause, Block Drivers)      ║" -ForegroundColor Green
-    Write-Host " ║ 13. UI Preferences (Context Menu, Themes)             ║" -ForegroundColor Green
+    Write-Host " ║ [SECURITY & PRIVACY]                                  ║" -ForegroundColor Green
+    Write-Host " ║ 11. Privacy Guardian (Copilot Block/Telemetry)        ║" -ForegroundColor Green
+    Write-Host " ║ 12. Smart Cache (Browser/DISM/Temp)                   ║" -ForegroundColor Green
+    Write-Host " ║ 13. Repair Tools (Store/Health Check)                 ║" -ForegroundColor Green
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ [AI & NEURAL v6.1]                                    ║" -ForegroundColor Magenta
-    Write-Host " ║ 18. Neural AI Dashboard (Q-Learning Stats)            ║" -ForegroundColor Magenta
-    Write-Host " ║ 19. Lenovo Optimization (Thermal Profiles)            ║" -ForegroundColor Magenta
-    Write-Host " ║ 20. AI Recommendations (Smart Analysis)               ║" -ForegroundColor Magenta
+    Write-Host " ║ [NEURAL AI FEATURES]                                  ║" -ForegroundColor Cyan
+    Write-Host " ║ 18. Neural Dashboard (Stats & History)                ║" -ForegroundColor Cyan
+    Write-Host " ║ 19. Start Learning Mode (Auto-Tune)                   ║" -ForegroundColor Cyan
+    Write-Host " ║ 20. AI Recommendations                                ║" -ForegroundColor Cyan
     Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ [TOOLS]                                               ║" -ForegroundColor White
-    Write-Host " ║ 14. System Monitor                                    ║" -ForegroundColor White
-    Write-Host " ║ 15. Network Diagnostics                               ║" -ForegroundColor White
-    Write-Host " ║ 16. Health Check                                      ║" -ForegroundColor White
-    Write-Host " ║ 17. Repair Windows Store                              ║" -ForegroundColor Yellow
-    Write-Host " ║                                                       ║" -ForegroundColor Cyan
-    Write-Host " ║ 0. Back to Main Menu                                  ║" -ForegroundColor White
+    Write-Host " ║ 0.  Back to Main Menu                                 ║" -ForegroundColor White
     Write-Host " ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
     return Read-Host " >> Select Tool"

@@ -36,7 +36,7 @@ function Optimize-Gaming {
     [CmdletBinding()]
     param()
     
-    Write-Section (Msg "Game.Title")
+    Show-NeuralHeader -Title "GAMING & PERFORMANCE" -Version "v6.5 ULTRA" -ProcessCategory "GAMING"
     
     # Hardware Detection
     $hw = Get-HardwareProfile

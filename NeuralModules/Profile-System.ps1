@@ -352,7 +352,9 @@ function Invoke-ProfileApplication {
     
     # System Responsiveness
     Write-Step "[9/10] SYSTEM RESPONSIVENESS"
-    $sysResponsiveness = if ($ProfileName -eq "GamingCompetitive") { 0 } elseif ($ProfileName -eq "Workstation") { 20 } else { 10 }
+    $sysResponsiveness = 10
+    if ($ProfileName -eq "GamingCompetitive") { $sysResponsiveness = 0 }
+    elseif ($ProfileName -eq "Workstation") { $sysResponsiveness = 20 }
     if (Set-RegistryKey -Path $sysProfile -Name "SystemResponsiveness" -Value $sysResponsiveness -Desc "System Responsiveness") { $applied++ } else { $failed++ }
     
     # Save profile selection

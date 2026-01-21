@@ -234,7 +234,8 @@ function Get-SmartHealth {
         $drives = Get-PhysicalDisk
         
         foreach ($d in $drives) {
-            $healthColor = if ($d.HealthStatus -eq "Healthy") { "Green" } else { "Red" }
+            $healthColor = "Red"
+            if ($d.HealthStatus -eq "Healthy") { $healthColor = "Green" }
             
             Write-Host " Unidad: $($d.FriendlyName)" -ForegroundColor Cyan
             Write-Host "   Estado: " -NoNewline

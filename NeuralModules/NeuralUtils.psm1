@@ -488,7 +488,7 @@ function Get-HardwareProfile {
         if ($chassis) {
             # ChassisTypes: 8=Portable, 9=Laptop, 10=Notebook, 14=Sub Notebook, 31=Convertible, 32=Detachable
             $laptopTypes = @(8, 9, 10, 14, 31, 32)
-            if ($laptopTypes -contains $chassis.ChassisTypes[0]) {
+            if ($chassis.ChassisTypes -and $laptopTypes -contains $chassis.ChassisTypes[0]) {
                 $hw.IsLaptop = $true
             }
         }
@@ -837,4 +837,54 @@ function Set-DeviceMSIMode {
     }
 }
 
-Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig, Set-DeviceMSIMode
+# ============================================================================
+# UI HELPERS
+# ============================================================================
+
+function Show-NeuralHeader {
+    param(
+        [string]$Title,
+        [string]$Version = "",
+        [string]$ProcessCategory = "Process"
+    )
+    
+    Clear-Host
+    $windowWidth = $Host.UI.RawUI.WindowSize.Width
+    if ($windowWidth -lt 80) { $windowWidth = 80 }
+    
+    # Border Chars
+    $h = "═"
+    $v = "║"
+    $tl = "╔"
+    $tr = "╗"
+    $bl = "╚"
+    $br = "╝"
+    
+    # Calculate padding
+    $contentWidth = 70 # Fixed width for visual consistency
+    $padding = " " * ([math]::Max(0, ($windowWidth - $contentWidth) / 2))
+    
+    $fullLine = $h * $contentWidth
+    
+    # Pad Title
+    $titleStr = " $Title $Version "
+    $padLeft = [math]::Floor(($contentWidth - 2 - $titleStr.Length) / 2)
+    $padRight = [math]::Ceiling(($contentWidth - 2 - $titleStr.Length) / 2)
+    $titleLine = $v + (" " * $padLeft) + $titleStr + (" " * $padRight) + $v
+    
+    # Pad Category
+    $catStr = " [ $ProcessCategory ] "
+    $padLeftCat = [math]::Floor(($contentWidth - 2 - $catStr.Length) / 2)
+    $padRightCat = [math]::Ceiling(($contentWidth - 2 - $catStr.Length) / 2)
+    $catLine = $v + (" " * $padLeftCat) + $catStr + (" " * $padRightCat) + $v
+
+    # Draw
+    Write-Host ""
+    Write-Host "$padding$tl$fullLine$tr" -ForegroundColor Cyan
+    Write-Host "$padding$catLine" -ForegroundColor DarkGray
+    Write-Host "$padding$titleLine" -ForegroundColor White
+    Write-Host "$padding$bl$fullLine$br" -ForegroundColor Cyan
+    Write-Host ""
+}
+
+Export-ModuleMember -Function Write-Log, Test-AdminPrivileges, Invoke-AdminCheck, Wait-ForKeyPress, Write-Section, Write-Step, Set-RegistryKey, Remove-FolderSafe, Get-HardwareProfile, Get-ActiveNetworkAdapter, New-SystemRestorePoint, Start-PerformanceTimer, Stop-PerformanceTimer, Get-PerformanceReport, Invoke-Rollback, Show-HardwareInfo, Get-WindowsVersion, Assert-SupportedOS, Get-NeuralConfig, Set-NeuralConfig, Set-DeviceMSIMode, Show-NeuralHeader

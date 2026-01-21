@@ -32,7 +32,7 @@ function Optimize-Debloat {
     [CmdletBinding()]
     param()
     
-    Write-Section "DEBLOAT & PRIVACY SUITE v6.5 ULTRA"
+    Show-NeuralHeader -Title "DEBLOAT & PRIVACY SUITE" -Version "v6.5 ULTRA" -ProcessCategory "SECURITY"
     
     $removedApps = 0
     $appliedTweaks = 0

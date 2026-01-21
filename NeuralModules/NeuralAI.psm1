@@ -22,6 +22,18 @@ $Script:BrainPath = Join-Path $Script:ModulePath "..\NeuralBrain.json"
 $Script:QTablePath = Join-Path $Script:ModulePath "..\NeuralQTable.json"
 $Script:ConfigPath = Join-Path $Script:ModulePath "..\NeuralConfig.json"
 
+# Import Security Module if available
+$SecModule = Join-Path $Script:ModulePath "NeuralSecurity.psm1"
+if (Test-Path $SecModule) { Import-Module $SecModule -Force }
+
+# Import Repair Module if available
+$RepairModule = Join-Path $Script:ModulePath "NeuralRepair.psm1"
+if (Test-Path $RepairModule) { Import-Module $RepairModule -Force }
+
+# Global Hardware/OS Detection
+$Script:IsLenovo = (Get-WmiObject Win32_ComputerSystem).Manufacturer -match "Lenovo"
+$Script:IsWin11 = [Environment]::OSVersion.Version.Build -ge 22000
+
 # Q-Learning Configuration
 $Script:QLearningConfig = @{
     Alpha          = 0.1
@@ -33,201 +45,25 @@ $Script:QLearningConfig = @{
 }
 
 # Tweaks Library - Expanded from GitHub Research (Win11Debloat, Perfect-Windows-11, facet4windows)
-$Script:TweakLibrary = @(
-    # === LOW RISK TWEAKS ===
-    # Latency
-    @{ Id = "TimerRes"; Name = "Global Timer Resolution"; Risk = "Low"; Category = "Latency"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"; Key = "GlobalTimerResolutionRequests"; ValueOn = 1; ValueOff = 0; Description = "Forces high-resolution timer" },
-    @{ Id = "DynamicTick"; Name = "Disable Dynamic Tick"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set disabledynamictick yes"; CommandOff = "bcdedit /set disabledynamictick no"; Description = "Disables power-saving tick" },
-    @{ Id = "HPET"; Name = "Disable HPET"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set useplatformclock no"; CommandOff = "bcdedit /set useplatformclock yes"; Description = "Uses TSC instead of HPET" },
-    @{ Id = "TSCSync"; Name = "TSC Sync Policy"; Risk = "Low"; Category = "Latency"; CommandOn = "bcdedit /set tscsyncpolicy enhanced"; CommandOff = "bcdedit /deletevalue tscsyncpolicy"; Description = "Enhanced TSC synchronization" },
-    
-    # Gaming
-    @{ Id = "GameMode"; Name = "Enable Game Mode"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\Software\Microsoft\GameBar"; Key = "AllowAutoGameMode"; ValueOn = 1; ValueOff = 0; Description = "Windows Game Mode" },
-    @{ Id = "FSO"; Name = "Fullscreen Optimizations"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_FSEBehaviorMode"; ValueOn = 2; ValueOff = 0; Description = "Disable FSO for classic fullscreen" },
-    @{ Id = "GameBar"; Name = "Disable Game Bar"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\Software\Microsoft\GameBar"; Key = "UseNexusForGameBarEnabled"; ValueOn = 0; ValueOff = 1; Description = "Disable Xbox Game Bar overlay" },
-    @{ Id = "GameDVR"; Name = "Disable Game DVR"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_Enabled"; ValueOn = 0; ValueOff = 1; Description = "Disable background recording" },
-    
-    # Input
-    @{ Id = "MouseAccel"; Name = "Disable Mouse Acceleration"; Risk = "Low"; Category = "Input"; Path = "HKCU:\Control Panel\Mouse"; Key = "MouseSpeed"; ValueOn = "0"; ValueOff = "1"; Description = "Raw mouse input" },
-    @{ Id = "MouseHover"; Name = "Faster Tooltips"; Risk = "Low"; Category = "Input"; Path = "HKCU:\Control Panel\Mouse"; Key = "MouseHoverTime"; ValueOn = "10"; ValueOff = "400"; Description = "Faster tooltip display" },
-    
-    # Network
-    @{ Id = "TcpAck"; Name = "TCP ACK Frequency"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "TcpAckFrequency"; ValueOn = 1; ValueOff = 2; Description = "Immediate TCP ack" },
-    @{ Id = "NagleOff"; Name = "Disable Nagle"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "TcpNoDelay"; ValueOn = 1; ValueOff = 0; Description = "Disable packet buffering" },
-    @{ Id = "NetThrottle"; Name = "Disable Network Throttling"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "NetworkThrottlingIndex"; ValueOn = 0xffffffff; ValueOff = 10; Description = "Remove network throttling" },
-    
-    # UI Performance (from Perfect-Windows-11)
-    @{ Id = "MenuDelay"; Name = "Menu Show Delay"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop"; Key = "MenuShowDelay"; ValueOn = "0"; ValueOff = "400"; Description = "Instant menu display" },
-    @{ Id = "StartupDelay"; Name = "Startup Delay"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize"; Key = "StartupDelayInMSec"; ValueOn = 0; ValueOff = 500; Description = "Remove startup app delay" },
-    @{ Id = "ForegroundLock"; Name = "Foreground Lock Timeout"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop"; Key = "ForegroundLockTimeout"; ValueOn = 0; ValueOff = 200000; Description = "Faster window switching" },
-    
-    # === MEDIUM RISK TWEAKS ===
-    # Memory
-    @{ Id = "MemCompress"; Name = "Disable Memory Compression"; Risk = "Medium"; Category = "Memory"; CommandOn = "Disable-MMAgent -MemoryCompression"; CommandOff = "Enable-MMAgent -MemoryCompression"; Description = "Saves CPU on 16GB+ RAM" },
-    @{ Id = "LargePages"; Name = "Large System Pages"; Risk = "Medium"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "LargePageMinimum"; ValueOn = 1; ValueOff = 0; Description = "Enable large memory pages" },
-    
-    # Storage
-    @{ Id = "Prefetch"; Name = "Optimize Prefetch"; Risk = "Medium"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"; Key = "EnablePrefetcher"; ValueOn = 0; ValueOff = 3; Description = "Disable prefetch on SSD" },
-    @{ Id = "Superfetch"; Name = "Disable Superfetch"; Risk = "Medium"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"; Key = "EnableSuperfetch"; ValueOn = 0; ValueOff = 3; Description = "Disable superfetch on SSD" },
-    
-    # CPU/Scheduler
-    @{ Id = "SysResp"; Name = "System Responsiveness"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "SystemResponsiveness"; ValueOn = 0; ValueOff = 20; Description = "Prioritize foreground apps" },
-    @{ Id = "CoreParking"; Name = "Disable Core Parking"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583"; Key = "ValueMax"; ValueOn = 0; ValueOff = 100; Description = "Keep all cores active" },
-    @{ Id = "PowerThrottle"; Name = "Disable Power Throttling"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling"; Key = "PowerThrottlingOff"; ValueOn = 1; ValueOff = 0; Description = "Prevent CPU throttling" },
-    
-    # Shutdown/Startup
-    @{ Id = "WaitToKill"; Name = "Faster Shutdown"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "WaitToKillAppTimeout"; ValueOn = "2000"; ValueOff = "20000"; Description = "Reduce shutdown wait" },
-    @{ Id = "AutoEndTasks"; Name = "Auto End Tasks"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "AutoEndTasks"; ValueOn = "1"; ValueOff = "0"; Description = "Auto-kill hung apps" },
-    @{ Id = "HungAppTimeout"; Name = "Hung App Timeout"; Risk = "Medium"; Category = "System"; Path = "HKCU:\Control Panel\Desktop"; Key = "HungAppTimeout"; ValueOn = "1000"; ValueOff = "5000"; Description = "Faster hung app detection" },
-    
-    # Privacy/Telemetry (from Win11Debloat)
-    @{ Id = "Telemetry"; Name = "Disable Telemetry"; Risk = "Medium"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "AllowTelemetry"; ValueOn = 0; ValueOff = 3; Description = "Disable data collection" },
-    
-    # === FILESYSTEM OPTIMIZATIONS ===
-    @{ Id = "Ntfs83"; Name = "Disable 8.3 Naming"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disable8dot3 1"; CommandOff = "fsutil behavior set disable8dot3 0"; Description = "Improves NTFS performance" },
-    @{ Id = "NtfsLastAccess"; Name = "Disable Last Access Update"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disablelastaccess 1"; CommandOff = "fsutil behavior set disablelastaccess 0"; Description = "Reduces disk write ops" },
-    @{ Id = "NtfsEncrypt"; Name = "Disable EFS"; Risk = "Low"; Category = "Filesystem"; CommandOn = "fsutil behavior set disableencryption 1"; CommandOff = "fsutil behavior set disableencryption 0"; Description = "Disables EFS overhead" },
-    
-    # === ADVANCED NETWORK ===
-    @{ Id = "CTCP"; Name = "CTCP Congestion Provider"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set supplemental template=internet congestionprovider=ctcp"; CommandOff = "netsh int tcp set supplemental template=internet congestionprovider=default"; Description = "Better throughput on high latency" },
-    @{ Id = "RscIPv4"; Name = "Enable RSC (IPv4)"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set global rsc=enabled"; CommandOff = "netsh int tcp set global rsc=disabled"; Description = "Receive Segment Coalescing" },
-    @{ Id = "RssIPv4"; Name = "Enable RSS"; Risk = "Medium"; Category = "Network"; CommandOn = "netsh int tcp set global rss=enabled"; CommandOff = "netsh int tcp set global rss=disabled"; Description = "Receive Side Scaling" },
-    @{ Id = "NetOffload"; Name = "Disable Task Offload"; Risk = "Medium"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "DisableTaskOffload"; ValueOn = 0; ValueOff = 1; Description = "Let NIC handle offloading" },
-    
-    # === PROCESSOR & THREADS ===
-    @{ Id = "Win32Prio"; Name = "Win32 Priority Separation"; Risk = "Medium"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl"; Key = "Win32PrioritySeparation"; ValueOn = 38; ValueOff = 2; Description = "Optimizes for foreground apps (Hex 26)" },
-    @{ Id = "SvcSplit"; Name = "Split Threshold"; Risk = "Medium"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control"; Key = "SvcHostSplitThresholdInKB"; ValueOn = 380000; ValueOff = 38000000; Description = "Better RAM handling for svchost" },
-    @{ Id = "LongPaths"; Name = "Enable Long Paths"; Risk = "Low"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem"; Key = "LongPathsEnabled"; ValueOn = 1; ValueOff = 0; Description = "Removes 260 char limit" },
-    
-    # === MEMORY & CACHE ===
-    @{ Id = "IoPageLock"; Name = "IO Page Lock Limit"; Risk = "High"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "IoPageLockLimit"; ValueOn = 65536; ValueOff = 0; Description = "Boosts I/O throughput" },
-    @{ Id = "NonPagedPool"; Name = "NonPaged Pool Size"; Risk = "High"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "NonPagedPoolSize"; ValueOn = 0; ValueOff = 0; Description = "System managed pool size" },
-    @{ Id = "SecondLevel"; Name = "L2 Cache Size"; Risk = "Medium"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "SecondLevelDataCache"; ValueOn = 0; ValueOff = 0; Description = "Auto-detect L2 cache" },
-    
-    # === GAMING EXTRAS ===
-    @{ Id = "GpuPrio"; Name = "GPU Priority"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "GPU Priority"; ValueOn = 8; ValueOff = 8; Description = "High GPU priority" },
-    @{ Id = "GamesPrio"; Name = "Games Scheduling"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Priority"; ValueOn = 6; ValueOff = 2; Description = "High CPU priority for games" },
-    @{ Id = "GamesSched"; Name = "Games Category"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Scheduling Category"; ValueOn = "High"; ValueOff = "Medium"; Description = "High scheduling category" },
-    
-    # === PRIVACY EXTENSIONS ===
-    @{ Id = "ExpBandwidth"; Name = "Experience Bandwidth"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Key = "RestrictTelemetry"; ValueOn = 0; ValueOff = 0; Description = "Restrict extra telemetry" },
-    @{ Id = "AppTrack"; Name = "Disable App Tracking"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI"; Key = "DisableMFUTracking"; ValueOn = 1; ValueOff = 0; Description = "Disable most frequently used apps" },
-    @{ Id = "Teredo"; Name = "Disable Teredo"; Risk = "Low"; Category = "Network"; CommandOn = "netsh interface teredo set state disabled"; CommandOff = "netsh interface teredo set state default"; Description = "Disable Teredo tunneling" },
-    @{ Id = "ISATAP"; Name = "Disable ISATAP"; Risk = "Low"; Category = "Network"; CommandOn = "netsh interface isatap set state disabled"; CommandOff = "netsh interface isatap set state default"; Description = "Disable ISATAP tunneling" },
-    
-    # === NEW: ADVANCED PRIVACY (from ChrisTitusTech/winutil) ===
-    @{ Id = "ActivityFeed"; Name = "Disable Activity History"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"; Key = "EnableActivityFeed"; ValueOn = 0; ValueOff = 1; Description = "Erases recent docs, clipboard, run history" },
-    @{ Id = "PublishActivity"; Name = "Disable Publish Activity"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"; Key = "PublishUserActivities"; ValueOn = 0; ValueOff = 1; Description = "Stop publishing user activities" },
-    @{ Id = "UploadActivity"; Name = "Disable Upload Activity"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"; Key = "UploadUserActivities"; ValueOn = 0; ValueOff = 1; Description = "Stop uploading user activities" },
-    @{ Id = "LocationTrack"; Name = "Disable Location Tracking"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"; Key = "Value"; ValueOn = "Deny"; ValueOff = "Allow"; Description = "Prevents GPS/location tracking" },
-    @{ Id = "SensorPerm"; Name = "Disable Sensor Permission"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}"; Key = "SensorPermissionState"; ValueOn = 0; ValueOff = 1; Description = "Block location sensor" },
-    @{ Id = "WifiSense"; Name = "Disable WiFi Sense"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config"; Key = "AutoConnectAllowedOEM"; ValueOn = 0; ValueOff = 1; Description = "Prevents auto-sharing WiFi credentials" },
-    @{ Id = "AdvertisingId"; Name = "Disable Advertising ID"; Risk = "Low"; Category = "Privacy"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"; Key = "Enabled"; ValueOn = 0; ValueOff = 1; Description = "Stop personalized ads" },
-    @{ Id = "ContentDelivery"; Name = "Disable Content Delivery"; Risk = "Low"; Category = "Privacy"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"; Key = "SilentInstalledAppsEnabled"; ValueOn = 0; ValueOff = 1; Description = "Stop auto-installing suggested apps" },
-    @{ Id = "StartSuggestions"; Name = "Disable Start Suggestions"; Risk = "Low"; Category = "Privacy"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"; Key = "SystemPaneSuggestionsEnabled"; ValueOn = 0; ValueOff = 1; Description = "Remove Start menu suggestions" },
-    
-    # === NEW: MMCSS ADVANCED (from latency research) ===
-    @{ Id = "SFIO_Priority"; Name = "SFIO High Priority"; Risk = "Low"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "SFIO Priority"; ValueOn = "High"; ValueOff = "Normal"; Description = "High scheduled file I/O priority" },
-    @{ Id = "GamesAffinity"; Name = "Full CPU Affinity"; Risk = "Low"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Affinity"; ValueOn = 0; ValueOff = 0; Description = "Use all CPU cores for games" },
-    @{ Id = "BackgroundOnly"; Name = "Foreground Priority"; Risk = "Low"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Background Only"; ValueOn = "False"; ValueOff = "True"; Description = "Prioritize foreground games" },
-    @{ Id = "ClockRate"; Name = "Force High Clock Rate"; Risk = "Medium"; Category = "Latency"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "AlwaysOn"; ValueOn = 1; ValueOff = 0; Description = "Force high resolution timer always" },
-    @{ Id = "LatencySens"; Name = "Latency Sensitive"; Risk = "Low"; Category = "Latency"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"; Key = "Latency Sensitive"; ValueOn = "True"; ValueOff = "False"; Description = "Mark games as latency sensitive" },
-    
-    # === NEW: GPU/DIRECT3D (from optimizer research) ===
-    @{ Id = "PreRender"; Name = "Max Pre-Rendered Frames"; Risk = "Low"; Category = "Gaming"; Path = "HKLM:\SOFTWARE\Microsoft\Direct3D"; Key = "MaxPreRenderedFrames"; ValueOn = 1; ValueOff = 3; Description = "Reduces GPU render queue latency" },
-    @{ Id = "HAGS"; Name = "HW GPU Scheduling"; Risk = "Medium"; Category = "Gaming"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"; Key = "HwSchMode"; ValueOn = 2; ValueOff = 1; Description = "Hardware-accelerated GPU scheduling" },
-    @{ Id = "FlipModel"; Name = "Flip Model Optimization"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_DXGIHonorFlipModeWindowedForHwnd"; ValueOn = 1; ValueOff = 0; Description = "Modern presentation model" },
-    @{ Id = "VRROptimize"; Name = "VRR Optimization"; Risk = "Low"; Category = "Gaming"; Path = "HKCU:\System\GameConfigStore"; Key = "GameDVR_DSE_Enable"; ValueOn = 1; ValueOff = 0; Description = "Variable Refresh Rate optimization" },
-    
-    # === NEW: NETWORK INTERFACE (advanced) ===
-    @{ Id = "TcpDelAck"; Name = "TCP Delayed ACK Ticks"; Risk = "Low"; Category = "Network"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"; Key = "TcpDelAckTicks"; ValueOn = 0; ValueOff = 2; Description = "Zero delay ACK timer" },
-    @{ Id = "ECN"; Name = "Disable ECN Capability"; Risk = "Low"; Category = "Network"; CommandOn = "netsh int tcp set global ecncapability=disabled"; CommandOff = "netsh int tcp set global ecncapability=default"; Description = "Better legacy network compatibility" },
-    @{ Id = "AutoTuning"; Name = "Normal Auto-Tuning"; Risk = "Low"; Category = "Network"; CommandOn = "netsh int tcp set global autotuninglevel=normal"; CommandOff = "netsh int tcp set global autotuninglevel=disabled"; Description = "Enable TCP window auto-tuning" },
-    @{ Id = "Timestamps"; Name = "Disable TCP Timestamps"; Risk = "Low"; Category = "Network"; CommandOn = "netsh int tcp set global timestamps=disabled"; CommandOff = "netsh int tcp set global timestamps=enabled"; Description = "Reduce packet overhead" },
-    
-    # === NEW: POWER/SLEEP (Laptop-Aware) ===
-    @{ Id = "ModernStandby"; Name = "Disable Modern Standby"; Risk = "Medium"; Category = "Power"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Power"; Key = "PlatformAoAcOverride"; ValueOn = 0; ValueOff = 1; Description = "Prevents S0 low power drain (laptops)" },
-    @{ Id = "USBSuspend"; Name = "Disable USB Selective Suspend"; Risk = "Low"; Category = "Power"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\USB"; Key = "DisableSelectiveSuspend"; ValueOn = 1; ValueOff = 0; Description = "Prevents USB disconnection issues" },
-    @{ Id = "FastStartup"; Name = "Disable Fast Startup"; Risk = "Medium"; Category = "Power"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power"; Key = "HiberbootEnabled"; ValueOn = 0; ValueOff = 1; Description = "Clean boot every time" },
-    @{ Id = "Hibernate"; Name = "Disable Hibernation"; Risk = "Low"; Category = "Power"; CommandOn = "powercfg /hibernate off"; CommandOff = "powercfg /hibernate on"; Description = "Disables hiberfil.sys (saves disk space)" },
-    @{ Id = "AHCI_LPM"; Name = "Disable AHCI Link Power"; Risk = "Medium"; Category = "Storage"; CommandOn = "powercfg -setacvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 dab60367-53fe-4fbc-825e-521d069d2456 0 & powercfg -setactive SCHEME_CURRENT"; CommandOff = "powercfg -setacvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 dab60367-53fe-4fbc-825e-521d069d2456 1 & powercfg -setactive SCHEME_CURRENT"; Description = "SSD/HDD always active (no power saving)" },
-    
-    # === NEW: BCDEDIT KERNEL TWEAKS (from 100+ source research) ===
-    @{ Id = "HypervisorOff"; Name = "Disable Hypervisor"; Risk = "Medium"; Category = "Kernel"; CommandOn = "bcdedit /set hypervisorlaunchtype off"; CommandOff = "bcdedit /set hypervisorlaunchtype auto"; Description = "Disables Hyper-V for gaming (if not using VMs)" },
-    @{ Id = "TSCEnhanced"; Name = "Enhanced TSC Sync"; Risk = "Low"; Category = "Kernel"; CommandOn = "bcdedit /set tscsyncpolicy enhanced"; CommandOff = "bcdedit /deletevalue tscsyncpolicy"; Description = "Better multi-core timestamp coordination" },
-    @{ Id = "LinuxBoot"; Name = "Disable Linear Boot"; Risk = "Low"; Category = "Kernel"; CommandOn = "bcdedit /set linearaddress57 optout"; CommandOff = "bcdedit /deletevalue linearaddress57"; Description = "Opt out of 57-bit linear addressing" },
-    @{ Id = "IncreaseUCR"; Name = "Increase User CR"; Risk = "Medium"; Category = "Kernel"; CommandOn = "bcdedit /set increaseuserva 3072"; CommandOff = "bcdedit /deletevalue increaseuserva"; Description = "More user-mode virtual address space" },
-    
-    # === NEW: VBS/HVCI SECURITY (gaming performance tradeoff) ===
-    @{ Id = "VBSOff"; Name = "Disable VBS"; Risk = "High"; Category = "Security"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"; Key = "EnableVirtualizationBasedSecurity"; ValueOn = 0; ValueOff = 1; Description = "Disable Virtualization-Based Security (5-15% FPS boost)" },
-    @{ Id = "HVCIOff"; Name = "Disable HVCI/Memory Integrity"; Risk = "High"; Category = "Security"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"; Key = "Enabled"; ValueOn = 0; ValueOff = 1; Description = "Disable Memory Integrity for gaming" },
-    @{ Id = "CredGuardOff"; Name = "Disable Credential Guard"; Risk = "High"; Category = "Security"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"; Key = "LsaCfgFlags"; ValueOn = 0; ValueOff = 1; Description = "Disable Credential Guard virtualization" },
-    
-    # === NEW: DPC/INTERRUPT LATENCY ===
-    @{ Id = "IntAffinity"; Name = "Interrupt Affinity Policy"; Risk = "Medium"; Category = "Latency"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"; Key = "InterruptAffinityPolicy"; ValueOn = 2; ValueOff = 0; Description = "Spread interrupts across CPU cores" },
-    @{ Id = "DisPageExec"; Name = "Disable Paging Executive"; Risk = "Medium"; Category = "Memory"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"; Key = "DisablePagingExecutive"; ValueOn = 1; ValueOff = 0; Description = "Keep kernel code in RAM (reduces DPC latency)" },
-    @{ Id = "TimerCoal"; Name = "Disable Timer Coalescing"; Risk = "Low"; Category = "Latency"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"; Key = "TimerResolution"; ValueOn = 0; ValueOff = 1; Description = "Prevents grouped background tasks" },
-    
-    # === NEW: AUDIO/MMCSS ADVANCED ===
-    @{ Id = "AudioPrio"; Name = "Audio Task Priority"; Risk = "Low"; Category = "Audio"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio"; Key = "Priority"; ValueOn = 8; ValueOff = 6; Description = "High audio thread priority" },
-    @{ Id = "AudioSched"; Name = "Audio Scheduling"; Risk = "Low"; Category = "Audio"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio"; Key = "Scheduling Category"; ValueOn = "High"; ValueOff = "Medium"; Description = "High audio scheduling category" },
-    @{ Id = "AudioClock"; Name = "Audio Clock Rate"; Risk = "Low"; Category = "Audio"; Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio"; Key = "Clock Rate"; ValueOn = 5000; ValueOff = 10000; Description = "Lower audio clock rate for less latency" },
-    @{ Id = "AudioDG"; Name = "Audio Device Graph Priority"; Risk = "Low"; Category = "Audio"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio"; Key = "MMCSSPriority"; ValueOn = 6; ValueOff = 2; Description = "Higher audiodg.exe priority" },
-    
-    # === NEW: CRASH DUMPS/DEBUG ===
-    @{ Id = "CrashDump"; Name = "Disable Crash Dumps"; Risk = "Medium"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl"; Key = "CrashDumpEnabled"; ValueOn = 0; ValueOff = 7; Description = "Saves disk space, minor performance boost" },
-    @{ Id = "AutoReboot"; Name = "Disable Auto Reboot on BSOD"; Risk = "Low"; Category = "System"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl"; Key = "AutoReboot"; ValueOn = 0; ValueOff = 1; Description = "Don't auto-reboot on crash" },
-    @{ Id = "WERDisable"; Name = "Disable Windows Error Reporting"; Risk = "Low"; Category = "Privacy"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting"; Key = "Disabled"; ValueOn = 1; ValueOff = 0; Description = "Stop error report uploads" },
-    
-    # === NEW: DEFENDER/SECURITY PERFORMANCE ===
-    @{ Id = "DefenderRT"; Name = "Reduce Defender CPU Usage"; Risk = "Medium"; Category = "Security"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Scan"; Key = "AvgCPULoadFactor"; ValueOn = 10; ValueOff = 50; Description = "Limit Defender CPU usage to 10%" },
-    @{ Id = "DefenderCloud"; Name = "Disable Defender Cloud"; Risk = "Medium"; Category = "Security"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet"; Key = "SpynetReporting"; ValueOn = 0; ValueOff = 2; Description = "Disable cloud lookup" },
-    
-    # === NEW: SCHEDULER VARIANTS (Win32PrioritySeparation) ===
-    @{ Id = "SchedFixed"; Name = "Fixed Short Quantum"; Risk = "Medium"; Category = "Scheduler"; Path = "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl"; Key = "Win32PrioritySeparation"; ValueOn = 0x28; ValueOff = 0x26; Description = "Short fixed quantum, no foreground boost" },
-    
-    # === NEW: HID/INPUT LATENCY ===
-    @{ Id = "HIDIdle"; Name = "Disable HID Idle"; Risk = "Low"; Category = "Input"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\HidUsb"; Key = "IdleEnabled"; ValueOn = 0; ValueOff = 1; Description = "Prevents HID device idle/wake delays" },
-    @{ Id = "MouseQueue"; Name = "Mouse Data Queue Size"; Risk = "Low"; Category = "Input"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\mouclass\Parameters"; Key = "MouseDataQueueSize"; ValueOn = 32; ValueOff = 100; Description = "Smaller mouse buffer for lower latency" },
-    @{ Id = "KeyboardQueue"; Name = "Keyboard Data Queue Size"; Risk = "Low"; Category = "Input"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters"; Key = "KeyboardDataQueueSize"; ValueOn = 32; ValueOff = 100; Description = "Smaller keyboard buffer" },
-    
-    # === NEW: NVME/STORAGE ADVANCED ===
-    @{ Id = "NVMeNative"; Name = "NVMe Native Mode"; Risk = "High"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device"; Key = "ForcedPhysicalSectorSizeInBytes"; ValueOn = 0; ValueOff = 0; Description = "Enable native NVMe (experimental)" },
-    @{ Id = "StorTelemetry"; Name = "Disable Storage Telemetry"; Risk = "Low"; Category = "Storage"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\disk"; Key = "EnableTelemetry"; ValueOn = 0; ValueOff = 1; Description = "Disable disk telemetry" },
-    
-    # === NEW: NVIDIA GPU (if detected) ===
-    @{ Id = "NvFrameQueue"; Name = "NVIDIA Disable Frame Queue"; Risk = "Medium"; Category = "GPU"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS"; Key = "EnableFrameQueue"; ValueOn = 0; ValueOff = 1; Description = "Disable NVIDIA driver frame queue (lowest latency)" },
-    @{ Id = "D3DPreRender"; Name = "Direct3D Pre-Rendered Frames"; Risk = "Low"; Category = "GPU"; Path = "HKLM:\SOFTWARE\Microsoft\Direct3D"; Key = "MaxPreRenderedFrames"; ValueOn = 1; ValueOff = 3; Description = "Limit GPU pre-render queue" },
-    @{ Id = "D3DFlipQueue"; Name = "Direct3D Flip Queue Size"; Risk = "Low"; Category = "GPU"; Path = "HKLM:\SOFTWARE\Microsoft\Direct3D"; Key = "FlipQueueSize"; ValueOn = 1; ValueOff = 0; Description = "Minimal flip queue for latency" },
-    
-    # === NEW: WINDOWS SERVICES (via command) ===
-    @{ Id = "DiagTrack"; Name = "Disable DiagTrack Service"; Risk = "Low"; Category = "Privacy"; CommandOn = "sc config DiagTrack start= disabled & sc stop DiagTrack"; CommandOff = "sc config DiagTrack start= auto & sc start DiagTrack"; Description = "Disable telemetry service" },
-    @{ Id = "WSearch"; Name = "Disable Windows Search"; Risk = "Medium"; Category = "System"; CommandOn = "sc config WSearch start= disabled & sc stop WSearch"; CommandOff = "sc config WSearch start= delayed-auto & sc start WSearch"; Description = "Disable indexing service (SSD optimization)" },
-    @{ Id = "SysMain"; Name = "Disable SysMain/Superfetch"; Risk = "Medium"; Category = "Memory"; CommandOn = "sc config SysMain start= disabled & sc stop SysMain"; CommandOff = "sc config SysMain start= auto & sc start SysMain"; Description = "Disable prefetch/superfetch (for SSD)" },
-    @{ Id = "XboxServices"; Name = "Disable Xbox Services"; Risk = "Low"; Category = "Gaming"; CommandOn = "sc config XblAuthManager start= disabled & sc config XblGameSave start= disabled & sc config XboxNetApiSvc start= disabled"; CommandOff = "sc config XblAuthManager start= manual & sc config XblGameSave start= manual & sc config XboxNetApiSvc start= manual"; Description = "Disable Xbox background services" },
-    
-    # === NEW: BACKGROUND APPS/STARTUP ===
-    @{ Id = "BackgroundApps"; Name = "Disable Background Apps"; Risk = "Low"; Category = "System"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"; Key = "GlobalUserDisabled"; ValueOn = 1; ValueOff = 0; Description = "Prevent UWP apps from running in background" },
-    @{ Id = "StartupDelay2"; Name = "Remove All Startup Delay"; Risk = "Low"; Category = "System"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"; Key = "Serialize"; ValueOn = 0; ValueOff = 1; Description = "Remove delay before loading startup apps" },
-    @{ Id = "OneDriveSU"; Name = "Disable OneDrive Startup"; Risk = "Low"; Category = "Privacy"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; Key = "OneDrive"; ValueOn = 3; ValueOff = 2; Description = "Prevent OneDrive auto-start" },
-    
-    # === NEW: VISUAL/UI PERFORMANCE ===
-    @{ Id = "DWMFlush"; Name = "DWM Animation Flush"; Risk = "Low"; Category = "UI"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\DWM"; Key = "AnimationsShiftKey"; ValueOn = 0; ValueOff = 1; Description = "Faster DWM animation flush" },
-    @{ Id = "MinAnimate"; Name = "Disable Min/Max Animate"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop\WindowMetrics"; Key = "MinAnimate"; ValueOn = "0"; ValueOff = "1"; Description = "Disable window animation" },
-    @{ Id = "CursorBlink"; Name = "Faster Cursor Blink"; Risk = "Low"; Category = "UI"; Path = "HKCU:\Control Panel\Desktop"; Key = "CursorBlinkRate"; ValueOn = "-1"; ValueOff = "530"; Description = "Disable cursor blink (saves CPU cycles)" },
-    
-    # === NEW: EXPLORER/SHELL ===
-    @{ Id = "ExplorerHeap"; Name = "Explorer Large Heap"; Risk = "Low"; Category = "System"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"; Key = "AlwaysUnloadDLL"; ValueOn = 1; ValueOff = 0; Description = "Free DLLs from memory when not used" },
-    @{ Id = "ThumbnailCache"; Name = "Disable Thumbnail Cache"; Risk = "Low"; Category = "Storage"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Key = "DisableThumbnailCache"; ValueOn = 1; ValueOff = 0; Description = "Don't cache folder thumbnails" },
+# Tweaks Library - Loaded from External Definition
+$TweakLibPath = Join-Path $Script:ModulePath "NeuralTweakLibrary.psd1"
+if (Test-Path $TweakLibPath) {
+    try {
+        $ImportedData = Import-PowerShellDataFile -Path $TweakLibPath
+        $Script:TweakLibrary = $ImportedData.TweakLibrary
+        Write-Host "Loaded $($Script:TweakLibrary.Count) tweaks from NeuralTweakLibrary." -ForegroundColor Cyan
+    }
+    catch {
+        Write-Error "Failed to load TweakLibrary: $_"
+        $Script:TweakLibrary = @()
+    }
+}
+else {
+    Write-Warning "NeuralTweakLibrary.psd1 not found at $TweakLibPath"
+    $Script:TweakLibrary = @()
+}
 
-    # === LENOVO-SPECIFIC TWEAKS ===
-    # These are only applied on Lenovo systems (condition checked at runtime)
-    @{ Id = "LenovoHybrid"; Name = "Lenovo Hybrid Mode (dGPU)"; Risk = "Medium"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "HybridMode"; WmiValueOn = "Disable"; WmiValueOff = "Enable"; Description = "Force dedicated GPU for gaming" },
-    @{ Id = "LenovoPerf"; Name = "Lenovo Max Performance"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "AdaptiveThermalManagementAC"; WmiValueOn = "MaximizePerformance"; WmiValueOff = "Balanced"; Description = "Maximum thermal on AC" },
-    @{ Id = "LenovoOverDrive"; Name = "Lenovo LCD OverDrive"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "OverDriveMode"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Faster LCD response time" },
-    @{ Id = "LenovoGPUOC"; Name = "Lenovo GPU Overclock"; Risk = "Medium"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "GPUOverclock"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Enable GPU boost mode" },
-    @{ Id = "LenovoCharge"; Name = "Lenovo Battery Conservation"; Risk = "Low"; Category = "Lenovo"; ConditionScript = "Test-LenovoSystem"; WmiSetting = "BatteryConservationMode"; WmiValueOn = "Enable"; WmiValueOff = "Disable"; Description = "Limit charge to 60% for longevity" }
-)
+
 
 # Persistent State Management
 function Get-NeuralBrain {
@@ -548,6 +384,289 @@ function Update-QValue {
     Set-QValue -QTable $QTable -State $State -Action $Action -Value $newQ
 }
 
+# ============================================================================
+# ENHANCED AI v7.0 - Modern RL Algorithms
+# ============================================================================
+
+# Action Visit Counter for UCB1
+$Script:ActionVisits = @{}
+$Script:TotalVisits = 0
+
+function Get-ActionVisits {
+    param([string]$State, [string]$Action)
+    $key = "$State|$Action"
+    if ($Script:ActionVisits.ContainsKey($key)) { return $Script:ActionVisits[$key] }
+    return 0
+}
+
+function Update-ActionVisits {
+    param([string]$State, [string]$Action)
+    $key = "$State|$Action"
+    if (-not $Script:ActionVisits.ContainsKey($key)) { $Script:ActionVisits[$key] = 0 }
+    $Script:ActionVisits[$key]++
+    $Script:TotalVisits++
+}
+
+function Select-ActionUCB1 {
+    <#
+    .SYNOPSIS
+        Upper Confidence Bound 1 action selection
+    .DESCRIPTION
+        Balances exploration vs exploitation mathematically.
+        Better than epsilon-greedy for long-term optimization.
+    #>
+    param($QTable, $State, $AvailableActions, $ExplorationConstant = 1.41)
+    
+    if ($AvailableActions.Count -eq 0) { return $null }
+    if ($Script:TotalVisits -eq 0) { return $AvailableActions | Get-Random }
+    
+    $bestAction = $null
+    $bestUCB = [double]::MinValue
+    
+    foreach ($action in $AvailableActions) {
+        $qValue = Get-QValue -QTable $QTable -State $State -Action $action
+        $visits = Get-ActionVisits -State $State -Action $action
+        
+        if ($visits -eq 0) {
+            # Unexplored action - prioritize
+            return $action
+        }
+        
+        # UCB1 formula: Q(s,a) + c * sqrt(ln(N) / n(a))
+        $ucbValue = $qValue + $ExplorationConstant * [math]::Sqrt([math]::Log($Script:TotalVisits) / $visits)
+        
+        if ($ucbValue -gt $bestUCB) {
+            $bestUCB = $ucbValue
+            $bestAction = $action
+        }
+    }
+    
+    return $bestAction
+}
+
+function Select-ActionThompson {
+    <#
+    .SYNOPSIS
+        Thompson Sampling for rapid decision making
+    .DESCRIPTION
+        Samples from posterior distribution - great for quick optimizations
+    #>
+    param($QTable, $State, $AvailableActions)
+    
+    if ($AvailableActions.Count -eq 0) { return $null }
+    
+    $samples = @{}
+    foreach ($action in $AvailableActions) {
+        $qValue = Get-QValue -QTable $QTable -State $State -Action $action
+        $visits = [math]::Max(1, (Get-ActionVisits -State $State -Action $action))
+        
+        # Beta distribution approximation with normal
+        $mean = ($qValue + 5) / 10  # Normalize to 0-1
+        $stdDev = 1 / [math]::Sqrt($visits)
+        
+        # Sample from normal approximation
+        $u1 = Get-Random -Minimum 0.001 -Maximum 0.999
+        $u2 = Get-Random -Minimum 0.001 -Maximum 0.999
+        $z = [math]::Sqrt(-2 * [math]::Log($u1)) * [math]::Cos(2 * [math]::PI * $u2)
+        $sample = $mean + $stdDev * $z
+        
+        $samples[$action] = $sample
+    }
+    
+    # Return action with highest sample
+    return ($samples.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Key
+}
+
+function Predict-UserWorkload {
+    <#
+    .SYNOPSIS
+        Predicts current user workload based on running processes
+    .DESCRIPTION
+        Analyzes active applications to determine: Gaming, Productivity, Streaming, Development, Idle
+    #>
+    
+    try {
+        $procs = Get-Process -ErrorAction SilentlyContinue | Select-Object ProcessName, WorkingSet64
+        
+        # Gaming indicators
+        $gamingProcs = @("steam", "epicgameslauncher", "origin", "uplay", "battlenet", "riotclient", 
+            "javaw", "minecraft", "valorant", "csgo", "dota2", "gta5", "elden", "cyberpunk")
+        $isGaming = ($procs | Where-Object { $gamingProcs -contains $_.ProcessName }).Count -gt 0
+        
+        # High GPU usage game detection
+        $highMemProcs = $procs | Where-Object { $_.WorkingSet64 -gt 2GB } | Select-Object -ExpandProperty ProcessName
+        $likelyGame = $highMemProcs | Where-Object { $_ -notmatch "chrome|firefox|edge|code|devenv|explorer|svchost" }
+        
+        if ($isGaming -or $likelyGame) { return "Gaming" }
+        
+        # Productivity indicators
+        $prodProcs = @("WINWORD", "EXCEL", "POWERPNT", "OUTLOOK", "Teams", "zoom", "slack", "notion")
+        $isProd = ($procs | Where-Object { $prodProcs -contains $_.ProcessName }).Count -gt 0
+        if ($isProd) { return "Productivity" }
+        
+        # Development indicators
+        $devProcs = @("Code", "devenv", "idea64", "pycharm64", "rider64", "webstorm64", "node", "python")
+        $isDev = ($procs | Where-Object { $devProcs -contains $_.ProcessName }).Count -gt 0
+        if ($isDev) { return "Development" }
+        
+        # Streaming indicators
+        $streamProcs = @("obs64", "obs32", "streamlabs", "xsplit", "nvidia share")
+        $isStream = ($procs | Where-Object { $streamProcs -contains $_.ProcessName }).Count -gt 0
+        if ($isStream) { return "Streaming" }
+        
+        # Browser heavy = Mixed/Browse
+        $browserProcs = @("chrome", "firefox", "msedge", "brave")
+        $browserCount = ($procs | Where-Object { $browserProcs -contains $_.ProcessName }).Count
+        if ($browserCount -gt 3) { return "Browsing" }
+        
+        # Check CPU usage for idle
+        $cpu = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction SilentlyContinue).PercentProcessorTime
+        if ($cpu -lt 10) { return "Idle" }
+        
+        return "General"
+    }
+    catch {
+        return "General"
+    }
+}
+
+function Get-MultiObjectiveReward {
+    <#
+    .SYNOPSIS
+        Calculates reward considering multiple performance dimensions
+    #>
+    param($Baseline, $Current, $Weights = @{ Latency = 0.4; Stability = 0.3; Responsiveness = 0.2; Thermal = 0.1 })
+    
+    $reward = 0
+    
+    # Latency improvement (DPC + Interrupt)
+    $latencyDelta = ($Baseline.DpcTime - $Current.DpcTime) + ($Baseline.InterruptTime - $Current.InterruptTime)
+    $reward += $latencyDelta * $Weights.Latency * 10
+    
+    # Stability (Context switches - lower is better)
+    $stabilityDelta = ($Baseline.ContextSwitch - $Current.ContextSwitch) / 1000
+    $reward += $stabilityDelta * $Weights.Stability * 5
+    
+    # Responsiveness (Disk queue - lower is better)
+    $responseDelta = $Baseline.DiskQueue - $Current.DiskQueue
+    $reward += $responseDelta * $Weights.Responsiveness * 5
+    
+    # Thermal (lower is better)
+    $thermalDelta = $Baseline.CpuTemp - $Current.CpuTemp
+    $reward += $thermalDelta * $Weights.Thermal
+    
+    return [math]::Round($reward, 3)
+}
+
+function Invoke-BatchLearning {
+    <#
+    .SYNOPSIS
+        Runs multiple learning cycles rapidly for initial training
+    #>
+    param(
+        [int]$Episodes = 10,
+        [string]$Workload = "General",
+        [switch]$Silent
+    )
+    
+    if (-not $Silent) {
+        Write-Host ""
+        Write-Host " === BATCH LEARNING MODE ($Episodes episodes) ===" -ForegroundColor Magenta
+    }
+    
+    $qTable = Get-QTable
+    $hardware = Get-HardwareProfile
+    $results = @()
+    
+    for ($i = 1; $i -le $Episodes; $i++) {
+        if (-not $Silent) {
+            Write-Host " [Episode $i/$Episodes]" -NoNewline -ForegroundColor Cyan
+        }
+        
+        $state = Get-CurrentState -Hardware $hardware -Workload $Workload
+        $actions = Get-AvailableActions -RiskLevel "Low" -Workload $Workload -Hardware $hardware
+        
+        # Use UCB1 for batch learning
+        $action = Select-ActionUCB1 -QTable $qTable -State $state -AvailableActions $actions
+        
+        if ($action) {
+            $baseline = Measure-SystemMetrics -DurationSeconds 2
+            $applied = Invoke-Tweak -TweakId $action -Apply
+            
+            if ($applied) {
+                Start-Sleep -Seconds 1
+                $after = Measure-SystemMetrics -DurationSeconds 2
+                $reward = Get-MultiObjectiveReward -Baseline $baseline -Current $after
+                
+                Update-ActionVisits -State $state -Action $action
+                Update-QValue -QTable $qTable -State $state -Action $action -Reward $reward -NewState $state -AvailableActions $actions
+                
+                $results += @{ Episode = $i; Action = $action; Reward = $reward }
+                
+                if (-not $Silent) {
+                    $color = if ($reward -gt 0) { "Green" } elseif ($reward -lt 0) { "Red" } else { "Gray" }
+                    Write-Host " ${action}: " -NoNewline
+                    Write-Host "$reward" -ForegroundColor $color
+                }
+                
+                # Revert if negative
+                if ($reward -lt 0) {
+                    Invoke-Tweak -TweakId $action -Revert | Out-Null
+                }
+            }
+        }
+    }
+    
+    Save-QTable -QTable $qTable
+    
+    $totalReward = ($results | Measure-Object -Property Reward -Sum).Sum
+    $avgReward = if ($results.Count -gt 0) { [math]::Round($totalReward / $results.Count, 3) } else { 0 }
+    
+    if (-not $Silent) {
+        Write-Host ""
+        Write-Host " Batch Complete: $($results.Count) actions, Total Reward: $totalReward, Avg: $avgReward" -ForegroundColor Green
+    }
+    
+    return @{ Episodes = $results.Count; TotalReward = $totalReward; AverageReward = $avgReward }
+}
+
+function Invoke-QuickOptimization {
+    <#
+    .SYNOPSIS
+        Fast optimization using Thompson Sampling (no wait for full learning)
+    #>
+    param([int]$Actions = 5)
+    
+    Write-Host ""
+    Write-Host " === QUICK OPTIMIZATION (Thompson Sampling) ===" -ForegroundColor Cyan
+    
+    $qTable = Get-QTable
+    $hardware = Get-HardwareProfile
+    $workload = Predict-UserWorkload
+    
+    Write-Host " Detected Workload: $workload" -ForegroundColor Gray
+    
+    $state = Get-CurrentState -Hardware $hardware -Workload $workload
+    $availableActions = Get-AvailableActions -RiskLevel "Low" -Workload $workload -Hardware $hardware
+    
+    $applied = @()
+    for ($i = 0; $i -lt $Actions; $i++) {
+        $action = Select-ActionThompson -QTable $qTable -State $state -AvailableActions $availableActions
+        
+        if ($action -and ($action -notin $applied)) {
+            $result = Invoke-Tweak -TweakId $action -Apply
+            if ($result) {
+                $applied += $action
+                Write-Host " Applied: $action" -ForegroundColor Green
+            }
+        }
+    }
+    
+    Write-Host ""
+    Write-Host " Quick Optimization Complete: $($applied.Count) tweaks applied" -ForegroundColor Cyan
+    return $applied
+}
+
 # Tweak Application
 function Invoke-Tweak {
     param([string]$TweakId, [switch]$Apply, [switch]$Revert)
@@ -584,18 +703,26 @@ function Invoke-Tweak {
         }
         elseif ($tweak.Path) {
             # Registry-based tweak
-            if (-not (Test-Path $tweak.Path)) { New-Item -Path $tweak.Path -Force | Out-Null }
-            Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $value -Force
+            # Ensure path exists for deeper keys
+            if (-not (Test-Path $tweak.Path)) { New-Item -Path $tweak.Path -Force -ErrorAction SilentlyContinue | Out-Null }
+            Set-ItemProperty -Path $tweak.Path -Name $tweak.Key -Value $value -Force -ErrorAction Stop
             return $true
         }
         elseif ($command) {
-            # Command-based tweak
+            # Command-based tweak (Powershell/CMD mixed)
+            # Use Invoke-Expression but silence output unless error
             Invoke-Expression $command 2>&1 | Out-Null
             return $true
         }
         return $false
     }
-    catch { Write-Host "   [!] Failed: $_" -ForegroundColor Red; return $false }
+    catch { 
+        # Only log critical errors, suppress "property not found" for optional features
+        if ($_.Exception.Message -notmatch "Property.*does not exist") {
+            Write-Host "   [!] Failed: $_" -ForegroundColor Red
+        }
+        return $false 
+    }
 }
 
 # Main Learning Cycle
@@ -941,6 +1068,7 @@ function Start-NeuralAutoPilot {
 }
 
 Export-ModuleMember -Function @(
+    # Core Q-Learning
     'Invoke-NeuralLearning',
     'Get-NeuralRecommendation', 
     'Get-NeuralBrain',
@@ -948,9 +1076,19 @@ Export-ModuleMember -Function @(
     'Get-BestTweaksForState',
     'Get-BestAction',
     'Get-QTable',
-    'Invoke-ExploratoryTweak',
     'Get-SystemLoadState',
     'Update-PersistenceRewards',
     'Set-UserFeedback',
-    'Start-NeuralAutoPilot'
+    'Start-NeuralAutoPilot',
+    'Get-AvailableActions',
+    'Invoke-Tweak',
+    'Get-CurrentState',
+    
+    # NEW v7.0 - Enhanced AI
+    'Select-ActionUCB1',
+    'Select-ActionThompson',
+    'Predict-UserWorkload',
+    'Get-MultiObjectiveReward',
+    'Invoke-BatchLearning',
+    'Invoke-QuickOptimization'
 )

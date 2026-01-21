@@ -1,0 +1,41 @@
+{
+    "Cleanups":  [
+                     {
+                         "Timestamp":  "2026-01-21T16:08:51.3519654-03:00",
+                         "TotalFreedMB":  null,
+                         "Locations":  5
+                     },
+                     {
+                         "Timestamp":  "2026-01-21T16:16:20.6382621-03:00",
+                         "TotalFreedMB":  null,
+                         "Locations":  3
+                     }
+                 ],
+    "Stats":  {
+                  "Windows Error Reporting":  {
+                                                  "AvgFreedMB":  7.88,
+                                                  "TotalFreedMB":  7.88,
+                                                  "CleanCount":  1
+                                              },
+                  "Delivery Optimization":  {
+                                                "AvgFreedMB":  18.95,
+                                                "TotalFreedMB":  18.95,
+                                                "CleanCount":  1
+                                            },
+                  "Brave (josef)":  {
+                                        "AvgFreedMB":  13.61,
+                                        "TotalFreedMB":  27.22,
+                                        "CleanCount":  2
+                                    },
+                  "User Temp (josef)":  {
+                                            "AvgFreedMB":  23.32,
+                                            "TotalFreedMB":  46.65,
+                                            "CleanCount":  2
+                                        },
+                  "CBS Logs":  {
+                                   "AvgFreedMB":  167.46,
+                                   "TotalFreedMB":  334.93,
+                                   "CleanCount":  2
+                               }
+              }
+}
