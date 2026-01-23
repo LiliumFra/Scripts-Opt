@@ -171,7 +171,7 @@ function Optimize-StandbyList {
     Set-RegistryKey -Path $memPath -Name "EnableSuperfetch" -Value 0 -Desc "Superfetch OFF (SSD)"
     
     # Memory trimming
-    Set-RegistryKey -Path $memPath -Name "DisablePagingExecutive" -Value 1 -Desc "Lock kernel in RAM"
+    # DisablePagingExecutive removed (Obsolete/Ineffective on modern Win10/11)
     
     Write-Host ""
     Write-Host " [TIP] Para limpiar Standby List manualmente:" -ForegroundColor Cyan

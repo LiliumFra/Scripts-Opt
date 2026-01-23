@@ -284,12 +284,12 @@ function Get-AvailableActions {
     
     # Define workload-specific category priorities
     $categoryPriorities = switch ($Workload) {
-        "Gaming" { @("Latency", "GPU", "Gaming", "Input", "Memory", "Scheduler", "Network") }
-        "Productivity" { @("UI", "System", "Memory", "Storage", "Privacy") }
-        "Audio" { @("Audio", "Latency", "System", "Memory") }
-        "Streaming" { @("Network", "GPU", "System", "Memory") }
-        "Development" { @("System", "Storage", "Memory", "UI", "Privacy") }
-        default { @("Latency", "Gaming", "Memory", "System", "Network", "UI", "Input", "Storage", "Privacy", "Scheduler", "Audio", "GPU", "Kernel", "Security") }
+        "Gaming" { @("Latency", "GPU", "Gaming", "Input", "Network", "Scheduler", "Security", "Filesystem") }
+        "Productivity" { @("UI", "System", "Memory", "Storage", "Privacy", "Debloat") }
+        "Audio" { @("Audio", "Latency", "System", "Memory", "Filesystem") }
+        "Streaming" { @("Network", "GPU", "System", "Memory", "Latency") }
+        "Development" { @("System", "Storage", "Memory", "UI", "Privacy", "Debloat", "Filesystem", "Security") }
+        default { @("Latency", "Gaming", "Memory", "System", "Network", "UI", "Input", "Storage", "Privacy", "Scheduler", "Audio", "GPU", "Kernel", "Security", "Debloat", "Filesystem") }
     }
     
     $actions = @()
@@ -727,7 +727,7 @@ function Invoke-Tweak {
 
 # Main Learning Cycle
 function Invoke-NeuralLearning {
-    param([string]$ProfileName, [object]$Hardware, [string]$Workload = "General")
+    param([string]$ProfileName, [object]$Hardware, [string]$Workload = "General", [string]$RiskLevel = "Low")
     
     Write-Section "NEURAL Q-LEARNING CYCLE v2.0 (DEEP LEARNING)"
     
@@ -740,7 +740,7 @@ function Invoke-NeuralLearning {
     Update-PersistenceRewards -QTable $qTable
     
     $state = Get-CurrentState -Hardware $Hardware -Workload $Workload
-    Write-Host "   [STATE] $state" -ForegroundColor Gray
+    Write-Host "   [STATE] $state (Risk: $RiskLevel)" -ForegroundColor Gray
     Write-Host "   [e] Exploration Rate: $([math]::Round($epsilon * 100, 1))%" -ForegroundColor Gray
     
     Write-Host ""
@@ -749,7 +749,7 @@ function Invoke-NeuralLearning {
     $baselineScore = $baselineMetrics.Score
     Write-Host "   [BASELINE] Score: $baselineScore/100" -ForegroundColor Yellow
     
-    $availableActions = Get-AvailableActions -RiskLevel "Low" -Workload $Workload -Hardware $Hardware
+    $availableActions = Get-AvailableActions -RiskLevel $RiskLevel -Workload $Workload -Hardware $Hardware
     Write-Host "   [AI] Available Actions: $($availableActions.Count) tweaks (filtered by context)\" -ForegroundColor DarkGray
     $selectedAction = Select-Action -QTable $qTable -State $state -AvailableActions $availableActions -Epsilon $epsilon
     

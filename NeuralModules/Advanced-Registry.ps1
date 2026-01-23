@@ -63,11 +63,8 @@ function Optimize-GamingRegistry {
     Write-Host ""
     Write-Step "[2] PROCESS & SCHEDULING"
     
-    # Network Throttling (FFFFFFFF = Disabled)
-    Set-RegistryTweak -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xFFFFFFFF -Description "Disable Network Throttling"
-    
-    # System Responsiveness (0 = max for games/multimedia)
-    Set-RegistryTweak -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "SystemResponsiveness" -Value 0 -Description "Maximize System Responsiveness for Games"
+    # Network Throttling & System Responsiveness removed (Obsolete/Ineffective on modern Win10/11)
+    # Default Windows 10/11 values are optimized for gigabit/fiber connections.
     
     # Power Throttling (Disable for all apps)
     Set-RegistryTweak -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Value 1 -Description "Disable Power Throttling"

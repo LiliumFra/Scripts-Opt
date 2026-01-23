@@ -33,6 +33,13 @@ if (-not (Get-Command "Invoke-PowerPlanCreation" -ErrorAction SilentlyContinue))
     if (Test-Path $plansPath) { Import-Module $plansPath -Force -DisableNameChecking }
 }
 
+# Ensure Brand Factory is loaded
+if (-not (Get-Command "Invoke-BrandOptimization" -ErrorAction SilentlyContinue)) {
+    $currentDir = Split-Path $MyInvocation.MyCommand.Path
+    $factoryPath = Join-Path $currentDir "Brand-Factory.psm1"
+    if (Test-Path $factoryPath) { Import-Module $factoryPath -Force -DisableNameChecking }
+}
+
 Invoke-AdminCheck -Silent
 
 # ============================================================================
@@ -693,9 +700,14 @@ function Invoke-SmartOptimization {
         Write-Host " [--] Cancelado." -ForegroundColor DarkGray
         return
     }
+
+    # Beast Mode Trigger
+    Write-Host " [?] Unlock 'Beast Mode' (Optimizaciones agresivas/kernel)? (S/N)" -ForegroundColor Red
+    $beastChoice = Read-Host "   >>"
+    $riskLevel = if ($beastChoice -match "^[Ss]") { "Medium" } else { "Low" }
     
     Write-Host ""
-    Write-Section "APLICANDO OPTIMIZACIONES INTELIGENTES"
+    Write-Section "APLICANDO OPTIMIZACIONES INTELIGENTES (Risk: $riskLevel)"
 
     # --- AI DECISION LOGIC REPORT ---
     Write-Host " [IA] Decidiendo configuracion optima..." -ForegroundColor Cyan
@@ -737,6 +749,12 @@ function Invoke-SmartOptimization {
         Write-Host "   > Hybrid CPU: Optimizando Thread Director y Parking." -ForegroundColor Magenta
     }
 
+    # 6. Brand-Specific Optimizations (Factory Pattern)
+    if (Get-Command "Invoke-BrandOptimization" -ErrorAction SilentlyContinue) {
+        Write-Host "   > Brand: Detectando modulos especificos..." -ForegroundColor Cyan
+        Invoke-BrandOptimization
+    }
+
     Write-Host ""
     # --------------------------------
     
@@ -749,26 +767,18 @@ function Invoke-SmartOptimization {
     Invoke-VisualOptimizations $hw
     Invoke-ServiceOptimizations $hw  # Added Smart Services
     
-    # --- REAL AI INTEGRATION ---
-    if (Get-Command "Get-SimulatedAIResponse" -ErrorAction SilentlyContinue) {
-        Write-Host ""
-        Write-Section "NEURAL AI ENGINE (TRUE-AI)"
-        Write-Host " [IA] Analizando telemetria de hardware..." -ForegroundColor Cyan
-        
-        # In a full version, we would check for NeuralConfig.json API Key here
-        # $aiResponse = Invoke-CloudAIAnalysis -HardwareProfile $hw -ApiKey $config.ApiKey
-        
-        # For now, we utilize the Local Expert System which uses non-linear decision trees
-        $aiTweaks = Get-SimulatedAIResponse -hw $hw
-        
-        if ($aiTweaks) {
-            foreach ($tweak in $aiTweaks) {
-                Write-Host "   [AI] Recommended: $($tweak.Desc)" -ForegroundColor Magenta
-                # Apply the tweak
-                Set-RegistryKey -Path $tweak.Path -Name $tweak.Name -Value $tweak.Value -Type $tweak.Type -Desc $tweak.Desc
-            }
-        }
-    }
+    # ====================================================================
+    # DYNAMIC TWEAK LIBRARY EXECUTION (BEAST MODE ENGINE)
+    # ====================================================================
+    # ====================================================================
+    # DYNAMIC TWEAK LIBRARY EXECUTION (BEAST MODE ENGINE)
+    # ====================================================================
+    # Refactored to NeuralEngine.psm1 for Beast Mode Modular Architecture
+    
+    # Pre-Flight: Purge 'Snake Oil' before applying real optimizations
+    Invoke-LegacyPurge
+    
+    Invoke-NeuralEngine -RiskLevel $riskLevel -OS $osName
 
     # Invoke-PowerOptimizations $hw # Deprecated in favor of Neural Power Plans
     
@@ -798,8 +808,8 @@ function Invoke-SmartOptimization {
     
     # Neural Learning Phase
     if (Get-Command "Invoke-NeuralLearning" -ErrorAction SilentlyContinue) {
-        Write-Host " |  [AI] Learning Phase: Measuring Impact...            |" -ForegroundColor Magenta
-        Invoke-NeuralLearning -ProfileName $hw.PerformanceTier -Hardware $hw
+        Write-Host " |  [AO] Fase de Aprendizaje Neural: Midiendo Impacto...|" -ForegroundColor Magenta
+        Invoke-NeuralLearning -ProfileName $hw.PerformanceTier -Hardware $hw -RiskLevel $riskLevel
     }
     
     Write-Host " |  Reinicia para aplicar todos los cambios.            |" -ForegroundColor Yellow

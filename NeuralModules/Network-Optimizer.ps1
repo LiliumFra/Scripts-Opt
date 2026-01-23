@@ -35,10 +35,7 @@ $Script:NetworkProfiles = @{
         Description = Msg "Net.Profile.General.Desc"
         Settings    = @{
             # TCP/IP Stack
-            TCPNoDelay          = 0              # Nagle's enabled (better for bulk transfers)
-            TcpAckFrequency     = 2         # ACK every 2 packets
-            TcpDelAckTicks      = 2          # 200ms delay
-            NetworkThrottling   = 10      # Slight throttling (10ms)
+            # Using Windows Default (Autotuning Level Normal)
             
             # Adapter
             InterruptModeration = $true  # CPU saving
@@ -58,10 +55,8 @@ $Script:NetworkProfiles = @{
         Description = Msg "Net.Profile.Gaming.Desc"
         Settings    = @{
             # TCP/IP Stack (Ultra Low Latency)
-            TCPNoDelay          = 1              # Nagle's OFF - critical for gaming
-            TcpAckFrequency     = 1         # ACK every packet (no delay)
-            TcpDelAckTicks      = 0          # 0ms delay
-            NetworkThrottling   = 0xFFFFFFFF  # Throttling completely disabled
+            # Relying on OS-Level Congestion Provider (CUBIC)
+            # Manual Registry Overrides removed to preventing de-sync.
             
             # Adapter (Performance over efficiency)
             InterruptModeration = $false # Instant packet processing
@@ -84,10 +79,8 @@ $Script:NetworkProfiles = @{
         Description = Msg "Net.Profile.Streaming.Desc"
         Settings    = @{
             # TCP/IP Stack (Throughput priority)
-            TCPNoDelay          = 0              # Nagle's ON (better for large streams)
-            TcpAckFrequency     = 2
-            TcpDelAckTicks      = 2
-            NetworkThrottling   = 0xFFFFFFFF  # Still no throttling
+            # Modern Windows 10/11 handles TCP Window Scaling & Congestion automatically.
+            # Removed obsolete manual overriding of Nagle's Algorithm for streaming safety.
             
             # Adapter (Throughput optimization)
             InterruptModeration = $true  # Reduce CPU load
