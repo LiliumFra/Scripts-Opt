@@ -5,6 +5,22 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
+# ============================================================================
+# BOOTSTRAP MODULES
+# ============================================================================
+$Script:ScriptDir = $PSScriptRoot
+$Script:ModuleDir = Join-Path -Path $Script:ScriptDir -ChildPath "NeuralModules"
+$Script:UtilsPath = Join-Path -Path $Script:ModuleDir -ChildPath "NeuralUtils.psm1"
+
+if (Test-Path $Script:UtilsPath) {
+    Import-Module $Script:UtilsPath -Force -DisableNameChecking
+    Import-Module (Join-Path -Path $Script:ModuleDir -ChildPath "NeuralLocalization.psm1") -Force -DisableNameChecking
+}
+else {
+    Write-Host " [FATAL] NeuralUtils.psm1 not found at $Script:UtilsPath" -ForegroundColor Red
+    exit 1
+}
+
 function Write-Section {
     param($Title)
     Write-Host ""
