@@ -1,3 +1,24 @@
+# Scripts-Opt
+
+**Modular Windows optimization toolkit built with PowerShell, with backups, risk-aware tweaks and local learning utilities.**
+
+> This repository contains the PowerShell-based optimizer and its supporting modules. System changes can affect stability or power behavior; review each tweak and keep backups before applying changes.
+
+## Overview
+
+Scripts-Opt groups system tuning, diagnostics, update handling and workload-specific modules behind a single launcher. The repository includes reversible workflows where supported, explicit risk levels, Lenovo-specific integrations and local recommendation tooling.
+
+### Highlights
+
+- Modular PowerShell architecture rather than one monolithic script.
+- Backup-oriented workflow for registry and configuration changes.
+- Risk classification for automatic vs. manual changes.
+- Local Q-learning/recommendation utilities and dashboard tooling.
+- Gaming, boot, disk, registry and Lenovo-specific modules.
+- Built-in update checking.
+
+---
+
 - Checks for updates on every startup
 - Shows changelog and prompts to update
 - Simple `git pull` integration
